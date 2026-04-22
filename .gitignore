@@ -1,0 +1,23 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Logs
+agent_logs.jsonl
+
+# Node
+node_modules/
+build/
+
+# Mac
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
