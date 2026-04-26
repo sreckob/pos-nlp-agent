@@ -15,6 +15,7 @@ State persists across turns via SessionStore:
   - last result set
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -277,7 +278,7 @@ async def run_agent(
         "start_time":   time.time()
     }
 
-    final_state = GRAPH.invoke(initial_state)
+    final_state = await asyncio.to_thread(GRAPH.invoke, initial_state)
 
     db_result = final_state.get("db_result") or {}
     rows      = db_result.get("rows", [])
