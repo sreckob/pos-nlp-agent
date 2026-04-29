@@ -118,7 +118,11 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                     "role":                 result.get("role"),
                     "language":             result.get("language"),
                     "timestamp":            datetime.utcnow().isoformat(),
-                    # Path-specific fields
+                    "suggest_switch":       result.get("suggest_switch", False),
+                    "switch_message":       result.get("switch_message"),
+                    "pending_role":         result.get("pending_role"),
+                    "force_reset":          result.get("force_reset", False),
+                    "mismatch_count":       result.get("mismatch_count", 0),
                     "dispute_found":        result.get("dispute_found", False),
                     "reversal_recommended": result.get("reversal_recommended", False),
                     "original_tx_id":       result.get("original_tx_id"),

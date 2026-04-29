@@ -1,19 +1,24 @@
 // ResultsTable.jsx
-// Renders query results as a sortable table
-
 import { useState } from "react";
+
+const STATUS_COLORS = {
+  APPROVED: { bg: "#DCFCE7", color: "#166534" },
+  DECLINED: { bg: "#FEE2E2", color: "#991B1B" },
+  REVERSED: { bg: "#FEF3C7", color: "#92400E" },
+  PENDING:  { bg: "#DBEAFE", color: "#1E40AF" },
+};
+
+const PAGE_SIZE = 20;
 
 export default function ResultsTable({ rows, rowCount }) {
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
-  const [page, setPage]       = useState(0);
-  const PAGE_SIZE = 20;
+  const [page,    setPage]    = useState(0);
 
   if (!rows || rows.length === 0) return null;
 
   const columns = Object.keys(rows[0]);
 
-  // Sorting
   const sorted = [...rows].sort((a, b) => {
     if (!sortCol) return 0;
     const av = a[sortCol], bv = b[sortCol];
@@ -23,64 +28,74 @@ export default function ResultsTable({ rows, rowCount }) {
     return sortDir === "asc" ? cmp : -cmp;
   });
 
-  // Pagination
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
-  const paged = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const paged      = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   function handleSort(col) {
-    if (sortCol === col) {
-      setSortDir(d => d === "asc" ? "desc" : "asc");
-    } else {
-      setSortCol(col);
-      setSortDir("asc");
-    }
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
     setPage(0);
   }
 
-  function formatValue(val) {
+  function fmt(val, col) {
     if (val == null) return "—";
-    if (typeof val === "string" && val.includes("T") && val.includes(":")) {
-      // looks like ISO timestamp
+    if (typeof val === "string" && val.includes("T") && val.includes(":"))
       return val.replace("T", " ").slice(0, 19);
-    }
     if (typeof val === "number") return val.toLocaleString();
+    if (typeof val === "boolean") return val ? "✓" : "✗";
     return String(val);
   }
 
-  function formatHeader(col) {
+  function fmtHeader(col) {
     return col.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  function cellStyle(col, val) {
+    if (col === "status" && STATUS_COLORS[val]) {
+      return {
+        ...STATUS_COLORS[val],
+        padding: "2px 8px", borderRadius: 10,
+        fontSize: 11, fontWeight: 600, whiteSpace: "nowrap"
+      };
+    }
+    if (col === "amount") {
+      return { color: parseFloat(val) < 0 ? "#DC2626" : "#0F172A",
+               fontVariantNumeric: "tabular-nums", fontWeight: 500 };
+    }
+    if (col === "loyalty_points_credited") {
+      return { color: val ? "#16A34A" : "#DC2626", fontWeight: 600 };
+    }
+    return {};
+  }
+
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.meta}>
-        {rowCount} result{rowCount !== 1 ? "s" : ""}
+    <div style={s.wrapper}>
+      <div style={s.meta}>
+        {rowCount.toLocaleString()} result{rowCount !== 1 ? "s" : ""}
         {rowCount > rows.length && ` (showing first ${rows.length})`}
       </div>
 
-      <div style={styles.tableWrapper}>
-        <table style={styles.table}>
+      <div style={s.tableWrap}>
+        <table style={s.table}>
           <thead>
             <tr>
               {columns.map(col => (
-                <th
-                  key={col}
-                  style={styles.th}
-                  onClick={() => handleSort(col)}
-                >
-                  {formatHeader(col)}
-                  {sortCol === col ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
+                <th key={col} style={s.th} onClick={() => handleSort(col)}>
+                  {fmtHeader(col)}
+                  <span style={s.sortIcon}>
+                    {sortCol === col ? (sortDir === "asc" ? " ↑" : " ↓") : " ↕"}
+                  </span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {paged.map((row, i) => (
-              <tr key={i} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
+              <tr key={i} style={i % 2 === 0 ? s.trEven : s.trOdd}>
                 {columns.map(col => (
-                  <td key={col} style={styles.td}>
-                    <span style={getCellStyle(col, row[col])}>
-                      {formatValue(row[col])}
+                  <td key={col} style={s.td}>
+                    <span style={cellStyle(col, row[col])}>
+                      {fmt(row[col], col)}
                     </span>
                   </td>
                 ))}
@@ -91,110 +106,36 @@ export default function ResultsTable({ rows, rowCount }) {
       </div>
 
       {totalPages > 1 && (
-        <div style={styles.pagination}>
-          <button
-            style={styles.pageBtn}
+        <div style={s.pagination}>
+          <button style={s.pgBtn}
             onClick={() => setPage(p => Math.max(0, p - 1))}
-            disabled={page === 0}
-          >
-            ← Prev
-          </button>
-          <span style={styles.pageInfo}>
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            style={styles.pageBtn}
+            disabled={page === 0}>← Prev</button>
+          <span style={s.pgInfo}>Page {page + 1} of {totalPages}</span>
+          <button style={s.pgBtn}
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-            disabled={page === totalPages - 1}
-          >
-            Next →
-          </button>
+            disabled={page === totalPages - 1}>Next →</button>
         </div>
       )}
     </div>
   );
 }
 
-function getCellStyle(col, val) {
-  if (col === "status") {
-    const colors = {
-      APPROVED: { background: "#d1fae5", color: "#065f46" },
-      DECLINED: { background: "#fee2e2", color: "#991b1b" },
-      REVERSED: { background: "#fef3c7", color: "#92400e" },
-      PENDING:  { background: "#e0f2fe", color: "#0c4a6e" },
-    };
-    return {
-      ...colors[val],
-      padding: "2px 8px",
-      borderRadius: 12,
-      fontSize: 12,
-      fontWeight: 600,
-      whiteSpace: "nowrap"
-    };
-  }
-  if (col === "amount") {
-    const num = parseFloat(val);
-    return { color: num < 0 ? "#dc2626" : "#111", fontVariantNumeric: "tabular-nums" };
-  }
-  return {};
-}
-
-const styles = {
-  wrapper: {
-    marginTop: 8,
-    fontSize: 13
-  },
-  meta: {
-    color: "#6b7280",
-    fontSize: 12,
-    marginBottom: 6
-  },
-  tableWrapper: {
-    overflowX: "auto",
-    borderRadius: 8,
-    border: "1px solid #e5e7eb"
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    fontSize: 13
-  },
+const s = {
+  wrapper:   { marginTop: 8, fontSize: 13 },
+  meta:      { color: "#94A3B8", fontSize: 12, marginBottom: 6 },
+  tableWrap: { overflowX: "auto", borderRadius: 8, border: "1px solid #E2E8F0" },
+  table:     { width: "100%", borderCollapse: "collapse", fontSize: 12 },
   th: {
-    background: "#f9fafb",
-    padding: "8px 12px",
-    textAlign: "left",
-    fontWeight: 600,
-    color: "#374151",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-    borderBottom: "1px solid #e5e7eb",
-    userSelect: "none"
+    background: "#F8FAFC", padding: "8px 12px",
+    textAlign: "left", fontWeight: 600, color: "#475569",
+    cursor: "pointer", whiteSpace: "nowrap",
+    borderBottom: "1px solid #E2E8F0", userSelect: "none", fontSize: 11
   },
-  td: {
-    padding: "7px 12px",
-    color: "#374151",
-    whiteSpace: "nowrap",
-    borderBottom: "1px solid #f3f4f6"
-  },
-  trEven: { background: "#ffffff" },
-  trOdd:  { background: "#f9fafb" },
-  pagination: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 8,
-    justifyContent: "flex-end"
-  },
-  pageBtn: {
-    padding: "4px 12px",
-    border: "1px solid #d1d5db",
-    borderRadius: 6,
-    background: "#fff",
-    cursor: "pointer",
-    fontSize: 13
-  },
-  pageInfo: {
-    color: "#6b7280",
-    fontSize: 13
-  }
+  sortIcon:  { color: "#CBD5E1" },
+  td:        { padding: "7px 12px", color: "#334155", whiteSpace: "nowrap", borderBottom: "1px solid #F1F5F9" },
+  trEven:    { background: "#FFFFFF" },
+  trOdd:     { background: "#F8FAFC" },
+  pagination:{ display: "flex", alignItems: "center", gap: 12, marginTop: 8, justifyContent: "flex-end" },
+  pgBtn:     { padding: "4px 12px", border: "1px solid #E2E8F0", borderRadius: 6, background: "#fff", cursor: "pointer", fontSize: 12 },
+  pgInfo:    { color: "#94A3B8", fontSize: 12 },
 };
