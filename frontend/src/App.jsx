@@ -73,6 +73,7 @@ export default function App() {
   const inputRef  = useRef(null);
 
   // ── WebSocket ────────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const connect = useCallback(async (sid) => {
     if (wsRef.current) wsRef.current.close();
 
