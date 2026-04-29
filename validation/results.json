@@ -1,0 +1,599 @@
+{
+  "timestamp": "2026-04-28T08:25:00.858260",
+  "ws_url": "ws://localhost:8000",
+  "summary": {
+    "total": 37,
+    "passed": 35,
+    "failed": 2,
+    "accuracy_pct": 94.6
+  },
+  "by_category": {
+    "exact_match": {
+      "passed": 5,
+      "total": 5,
+      "accuracy_pct": 100.0
+    },
+    "range_query": {
+      "passed": 6,
+      "total": 6,
+      "accuracy_pct": 100.0
+    },
+    "status_filter": {
+      "passed": 5,
+      "total": 5,
+      "accuracy_pct": 100.0
+    },
+    "aggregation": {
+      "passed": 6,
+      "total": 6,
+      "accuracy_pct": 100.0
+    },
+    "multi_filter": {
+      "passed": 5,
+      "total": 5,
+      "accuracy_pct": 100.0
+    },
+    "multi_turn": {
+      "passed": 2,
+      "total": 3,
+      "accuracy_pct": 66.7
+    },
+    "edge_case": {
+      "passed": 6,
+      "total": 7,
+      "accuracy_pct": 85.7
+    }
+  },
+  "results": [
+    {
+      "id": "EX-01",
+      "category": "exact_match",
+      "language": "english",
+      "prompt": "Find the transaction with approval code A1B2C3",
+      "passed": true,
+      "sql": "SELECT * FROM transactions WHERE approval_code = 'A1B2C3' ORDER BY transaction_date DESC",
+      "row_count": 0,
+      "answer": "Nema pronađenih transakcija za ovaj upit.",
+      "missing_keywords": [],
+      "reason": "✓ 0 rows returned (zero or more acceptable)",
+      "latency_ms": 3716
+    },
+    {
+      "id": "EX-02",
+      "category": "exact_match",
+      "language": "english",
+      "prompt": "Show me all transactions from terminal T0101",
+      "passed": true,
+      "sql": "SELECT * FROM transactions WHERE terminal_id = 'T0101' ORDER BY transaction_date DESC",
+      "row_count": 0,
+      "answer": "Nema pronađenih transakcija za ovaj upit.",
+      "missing_keywords": [],
+      "reason": "✓ 0 rows returned (zero or more acceptable)",
+      "latency_ms": 2873
+    },
+    {
+      "id": "EX-03",
+      "category": "exact_match",
+      "language": "english",
+      "prompt": "Find transactions with PAN ending in 1234",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name FROM transactions WHERE pan_masked LIKE '%1234' ORDER BY transaction_date DESC",
+      "row_count": 5,
+      "answer": "I found all transactions for cards ending in 1234, showing the transaction details including date, amount, status, and merchant information. (5 results)",
+      "missing_keywords": [],
+      "reason": "✓ 5 rows returned (zero or more acceptable)",
+      "latency_ms": 4995
+    },
+    {
+      "id": "EX-04",
+      "category": "exact_match",
+      "language": "serbian",
+      "prompt": "Pronađi transakciju sa kodom odobrenja X9Y8Z7",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, response_code, approval_code, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE approval_code = 'X9Y8Z7' ORDER BY transaction_date DESC",
+      "row_count": 0,
+      "answer": "Nema pronađenih transakcija za ovaj upit.",
+      "missing_keywords": [],
+      "reason": "✓ 0 rows returned (zero or more acceptable)",
+      "latency_ms": 3870
+    },
+    {
+      "id": "EX-05",
+      "category": "exact_match",
+      "language": "serbian",
+      "prompt": "Prikaži sve transakcije na terminalu T0201",
+      "passed": true,
+      "sql": "SELECT * FROM transactions WHERE terminal_id = 'T0201' ORDER BY transaction_date DESC",
+      "row_count": 0,
+      "answer": "Nema pronađenih transakcija za ovaj upit.",
+      "missing_keywords": [],
+      "reason": "✓ 0 rows returned (zero or more acceptable)",
+      "latency_ms": 3169
+    },
+    {
+      "id": "RN-01",
+      "category": "range_query",
+      "language": "english",
+      "prompt": "Show transactions with amount between 1000 and 5000 RSD",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE currency = 'RSD' AND amount BETWEEN 1000 AND 5000 ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "Showing all transactions with amounts between 1,000 and 5,000 RSD, sorted by most recent first. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 3468
+    },
+    {
+      "id": "RN-02",
+      "category": "range_query",
+      "language": "english",
+      "prompt": "Find all transactions from last 7 days",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, response_code, pan_masked, card_brand, merchant_name, merchant_category, transaction_type FROM transactions WHERE transaction_date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "I found all transactions from the last 7 days, sorted by date with the most recent first. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 3581
+    },
+    {
+      "id": "RN-03",
+      "category": "range_query",
+      "language": "english",
+      "prompt": "Show transactions above 50000 RSD from last month",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE amount > 50000 AND currency = 'RSD' AND transaction_date >= CURRENT_DATE - 30 ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "Here are all transactions above 50,000 RSD from the last 30 days, sorted by most recent first. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 3620
+    },
+    {
+      "id": "RN-04",
+      "category": "range_query",
+      "language": "english",
+      "prompt": "Find transactions between April 1 and April 10 2026",
+      "passed": true,
+      "sql": "SELECT * FROM transactions WHERE transaction_date >= '2026-04-01 00:00:00' AND transaction_date < '2026-04-11 00:00:00' ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "I'll retrieve all transactions that occurred between April 1 and April 10, 2026 (inclusive), sorted by most recent first. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 4149
+    },
+    {
+      "id": "RN-05",
+      "category": "range_query",
+      "language": "serbian",
+      "prompt": "Prikaži transakcije između 2000 i 10000 dinara",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE currency = 'RSD' AND amount BETWEEN 2000 AND 10000 ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "Prikazujem transakcije u rasponu od 2.000 do 10.000 dinara, sortirane od najnovijih. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 4123
+    },
+    {
+      "id": "RN-06",
+      "category": "range_query",
+      "language": "serbian",
+      "prompt": "Koje transakcije su bile prošle sedmice?",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE transaction_date >= CURRENT_DATE - 7 ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "Pronalazim sve transakcije iz prošle sedmice (poslednjih 7 dana), sortirane od najnovijih ka najstarijim. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 3908
+    },
+    {
+      "id": "ST-01",
+      "category": "status_filter",
+      "language": "english",
+      "prompt": "Show me all declined transactions",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, response_code, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE status = 'DECLINED' ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "I'll show you all declined transactions from the database, ordered by most recent first. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 3061
+    },
+    {
+      "id": "ST-02",
+      "category": "status_filter",
+      "language": "english",
+      "prompt": "Find all approved transactions from today",
+      "passed": true,
+      "sql": "SELECT * FROM transactions WHERE status = 'APPROVED' AND DATE(transaction_date) = CURRENT_DATE ORDER BY transaction_date DESC",
+      "row_count": 21,
+      "answer": "Found all approved transactions from today, sorted by most recent first. (21 results)",
+      "missing_keywords": [],
+      "reason": "✓ 21 rows returned",
+      "latency_ms": 3281
+    },
+    {
+      "id": "ST-03",
+      "category": "status_filter",
+      "language": "english",
+      "prompt": "Show reversed and pending transactions from last week",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE status IN ('REVERSED', 'PENDING') AND transaction_date >= CURRENT_DATE - 7 ORDER BY transaction_date DESC",
+      "row_count": 26,
+      "answer": "Showing all reversed and pending transactions from the last 7 days, sorted by most recent first. (26 results)",
+      "missing_keywords": [],
+      "reason": "✓ 26 rows returned",
+      "latency_ms": 3901
+    },
+    {
+      "id": "ST-04",
+      "category": "status_filter",
+      "language": "serbian",
+      "prompt": "Pokaži mi sve odbijene transakcije od juče",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, response_code, pan_masked, card_brand, merchant_name FROM transactions WHERE status = 'DECLINED' AND DATE(transaction_date) = CURRENT_DATE - 1 ORDER BY transaction_date DESC",
+      "row_count": 13,
+      "answer": "Prikazujem sve odbijene transakcije od juče. (13 results)",
+      "missing_keywords": [],
+      "reason": "✓ 13 rows returned",
+      "latency_ms": 3210
+    },
+    {
+      "id": "ST-05",
+      "category": "status_filter",
+      "language": "serbian",
+      "prompt": "Koliko odobrenih transakcija je bilo danas?",
+      "passed": true,
+      "sql": "SELECT COUNT(*) as total_approved FROM transactions WHERE DATE(transaction_date) = CURRENT_DATE AND status = 'APPROVED'",
+      "row_count": 1,
+      "answer": "Prikazujem broj odobrenih transakcija za danas. (1 result)",
+      "missing_keywords": [],
+      "reason": "✓ 1 rows returned",
+      "latency_ms": 3071
+    },
+    {
+      "id": "AG-01",
+      "category": "aggregation",
+      "language": "english",
+      "prompt": "Which terminal processed the most transactions?",
+      "passed": true,
+      "sql": "SELECT terminal_id, COUNT(*) as transaction_count FROM transactions GROUP BY terminal_id ORDER BY transaction_count DESC LIMIT 1",
+      "row_count": 1,
+      "answer": "This query will identify the terminal that processed the most transactions by counting all transactions per terminal and returning the one with the highest count. (1 result)",
+      "missing_keywords": [],
+      "reason": "✓ 1 rows returned",
+      "latency_ms": 3208
+    },
+    {
+      "id": "AG-02",
+      "category": "aggregation",
+      "language": "english",
+      "prompt": "What is the total transaction amount per merchant this month?",
+      "passed": true,
+      "sql": "SELECT merchant_name, SUM(amount) as total_amount, COUNT(*) as transaction_count FROM transactions WHERE transaction_date >= DATE_TRUNC('month', CURRENT_DATE) GROUP BY merchant_name ORDER BY total_amount DESC",
+      "row_count": 40,
+      "answer": "This query will show the total transaction amount for each merchant this month, including the number of transactions, sorted from highest to lowest total amount. (40 results)",
+      "missing_keywords": [],
+      "reason": "✓ 40 rows returned",
+      "latency_ms": 3439
+    },
+    {
+      "id": "AG-03",
+      "category": "aggregation",
+      "language": "english",
+      "prompt": "Which card brand is used most frequently?",
+      "passed": true,
+      "sql": "SELECT card_brand, COUNT(*) as transaction_count FROM transactions GROUP BY card_brand ORDER BY transaction_count DESC LIMIT 1",
+      "row_count": 1,
+      "answer": "I'll find the most frequently used card brand by counting transactions for each brand and returning the one with the highest count. (1 result)",
+      "missing_keywords": [],
+      "reason": "✓ 1 rows returned",
+      "latency_ms": 3383
+    },
+    {
+      "id": "AG-04",
+      "category": "aggregation",
+      "language": "english",
+      "prompt": "How many transactions were declined per merchant last month?",
+      "passed": true,
+      "sql": "SELECT merchant_name, merchant_id, COUNT(*) as declined_count FROM transactions WHERE status = 'DECLINED' AND transaction_date >= CURRENT_DATE - 30 GROUP BY merchant_name, merchant_id ORDER BY declined_count DESC",
+      "row_count": 40,
+      "answer": "This query will show the number of declined transactions for each merchant in the last 30 days, sorted from highest to lowest count. (40 results)",
+      "missing_keywords": [],
+      "reason": "✓ 40 rows returned",
+      "latency_ms": 3540
+    },
+    {
+      "id": "AG-05",
+      "category": "aggregation",
+      "language": "serbian",
+      "prompt": "Koji terminal je procesirao najveći ukupan iznos transakcija?",
+      "passed": true,
+      "sql": "SELECT terminal_id, SUM(amount) as total_amount, COUNT(*) as transaction_count FROM transactions WHERE status = 'APPROVED' AND amount > 0 GROUP BY terminal_id ORDER BY total_amount DESC LIMIT 1",
+      "row_count": 1,
+      "answer": "Pronašao sam terminal koji je procesirao najveći ukupan iznos odobrenih transakcija. (1 result)",
+      "missing_keywords": [],
+      "reason": "✓ 1 rows returned",
+      "latency_ms": 3447
+    },
+    {
+      "id": "AG-06",
+      "category": "aggregation",
+      "language": "serbian",
+      "prompt": "Koliko transakcija je bilo po kategoriji trgovca prošlog meseca?",
+      "passed": true,
+      "sql": "SELECT merchant_category, COUNT(*) as broj_transakcija FROM transactions WHERE transaction_date >= CURRENT_DATE - 30 GROUP BY merchant_category ORDER BY broj_transakcija DESC",
+      "row_count": 12,
+      "answer": "Prikazujem broj transakcija po kategoriji trgovca za poslednji mesec, sortirano od kategorije sa najviše transakcija. (12 results)",
+      "missing_keywords": [],
+      "reason": "✓ 12 rows returned",
+      "latency_ms": 2897
+    },
+    {
+      "id": "MF-01",
+      "category": "multi_filter",
+      "language": "english",
+      "prompt": "Show declined Visa contactless transactions above 5000 RSD from last week",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, response_code, pan_masked, merchant_name, merchant_category FROM transactions WHERE status = 'DECLINED' AND card_brand = 'VISA' AND card_type = 'CONTACTLESS' AND amount > 5000 AND currency = 'RSD' AND transaction_date >= CURRENT_DATE - 7 ORDER BY transaction_date DESC",
+      "row_count": 17,
+      "answer": "Found declined Visa contactless transactions above 5,000 RSD from the last week. The query will show transaction details including date, amount, response code, masked card number, and merchant information. (17 results)",
+      "missing_keywords": [],
+      "reason": "✓ 17 rows returned",
+      "latency_ms": 4111
+    },
+    {
+      "id": "MF-02",
+      "category": "multi_filter",
+      "language": "english",
+      "prompt": "Find approved Mastercard credit card purchases at Maxi Supermarket",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, pan_masked, terminal_id, merchant_name FROM transactions WHERE status = 'APPROVED' AND card_brand = 'MASTERCARD' AND card_class = 'CREDIT' AND transaction_type = 'PURCHASE' AND merchant_name ILIKE '%Maxi Supermarket%' ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "Found approved Mastercard credit card purchases at Maxi Supermarket, sorted by most recent first. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 3597
+    },
+    {
+      "id": "MF-03",
+      "category": "multi_filter",
+      "language": "english",
+      "prompt": "Show corporate card transactions above 20000 RSD that were declined",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, pan_masked, card_brand, response_code, merchant_name, merchant_category FROM transactions WHERE card_class = 'CORPORATE' AND currency = 'RSD' AND amount > 20000 AND status = 'DECLINED' ORDER BY transaction_date DESC",
+      "row_count": 99,
+      "answer": "Here are the corporate card transactions over 20,000 RSD that were declined. The results show transaction details including date, amount, card information, response code, and merchant details, sorted by most recent first. (99 results)",
+      "missing_keywords": [],
+      "reason": "✓ 99 rows returned",
+      "latency_ms": 6051
+    },
+    {
+      "id": "MF-04",
+      "category": "multi_filter",
+      "language": "serbian",
+      "prompt": "Pokaži odbijene Visa beskontaktne transakcije iznad 5000 dinara prošle sedmice",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, response_code, pan_masked, merchant_name, merchant_category FROM transactions WHERE status = 'DECLINED' AND card_brand = 'VISA' AND card_type = 'CONTACTLESS' AND currency = 'RSD' AND amount > 5000 AND transaction_date >= CURRENT_DATE - 7 ORDER BY transaction_date DESC",
+      "row_count": 17,
+      "answer": "Prikazujem odbijene Visa beskontaktne transakcije iznad 5000 dinara iz prošle sedmice, sortirane od najnovijih. (17 results)",
+      "missing_keywords": [],
+      "reason": "✓ 17 rows returned",
+      "latency_ms": 3470
+    },
+    {
+      "id": "MF-05",
+      "category": "multi_filter",
+      "language": "serbian",
+      "prompt": "Prikaži sve UnionPay transakcije u hotelima iznad 100 EUR",
+      "passed": true,
+      "sql": "SELECT * FROM transactions WHERE card_brand = 'UNIONPAY' AND merchant_category = 'HOTEL' AND currency = 'EUR' AND amount > 100 ORDER BY transaction_date DESC",
+      "row_count": 100,
+      "answer": "Prikazujem sve UnionPay transakcije u hotelima sa iznosom iznad 100 EUR, sortirane po datumu.",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 3544
+    },
+    {
+      "id": "MT-01",
+      "category": "multi_turn",
+      "language": "english",
+      "turns": [
+        {
+          "turn": 1,
+          "prompt": "Show declined transactions from last month",
+          "sql": "SELECT transaction_id, transaction_date, amount, currency, response_code, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE status = 'DECLINED' AND transaction_date >= CURRENT_DATE - 30 ORDER BY transaction_date DESC",
+          "row_count": 100,
+          "passed": true,
+          "missing_keywords": [],
+          "reason": "✓ 100 rows returned"
+        },
+        {
+          "turn": 2,
+          "prompt": "Only Visa cards",
+          "sql": "SELECT transaction_id, transaction_date, amount, currency, response_code, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE status = 'DECLINED' AND transaction_date >= CURRENT_DATE - 30 AND card_brand = 'VISA' ORDER BY transaction_date DESC",
+          "row_count": 100,
+          "passed": true,
+          "missing_keywords": [],
+          "reason": "✓ 100 rows returned"
+        },
+        {
+          "turn": 3,
+          "prompt": "Sort by amount descending",
+          "sql": "SELECT transaction_id, transaction_date, amount, currency, response_code, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE status = 'DECLINED' AND transaction_date >= CURRENT_DATE - 30 AND card_brand = 'VISA' ORDER BY amount DESC",
+          "row_count": 100,
+          "passed": true,
+          "missing_keywords": [],
+          "reason": "✓ 100 rows returned"
+        }
+      ],
+      "passed": true,
+      "reason": "All turns passed",
+      "latency_ms": 9717
+    },
+    {
+      "id": "MT-02",
+      "category": "multi_turn",
+      "language": "mixed",
+      "turns": [
+        {
+          "turn": 1,
+          "prompt": "Show transactions at NIS Petrol above 3000 RSD",
+          "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name FROM transactions WHERE merchant_name ILIKE '%NIS%Petrol%' AND amount > 3000 AND currency = 'RSD' ORDER BY transaction_date DESC",
+          "row_count": 100,
+          "passed": false,
+          "missing_keywords": [
+            "NIS Petrol"
+          ],
+          "reason": "✓ 100 rows returned"
+        },
+        {
+          "turn": 2,
+          "prompt": "Samo odbijene",
+          "sql": "SELECT transaction_id, transaction_date, amount, currency, status, response_code, pan_masked, card_brand, merchant_name FROM transactions WHERE merchant_name ILIKE '%NIS%Petrol%' AND amount > 3000 AND currency = 'RSD' AND status = 'DECLINED' ORDER BY transaction_date DESC",
+          "row_count": 100,
+          "passed": false,
+          "missing_keywords": [
+            "NIS Petrol"
+          ],
+          "reason": "✓ 100 rows returned (zero or more acceptable)"
+        }
+      ],
+      "passed": false,
+      "reason": "One or more turns failed",
+      "latency_ms": 7040
+    },
+    {
+      "id": "MT-03",
+      "category": "multi_turn",
+      "language": "serbian",
+      "turns": [
+        {
+          "turn": 1,
+          "prompt": "Pokaži transakcije od juče",
+          "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE DATE(transaction_date) = CURRENT_DATE - 1 ORDER BY transaction_date DESC",
+          "row_count": 71,
+          "passed": true,
+          "missing_keywords": [],
+          "reason": "✓ 71 rows returned"
+        },
+        {
+          "turn": 2,
+          "prompt": "Samo one iznad 10000 dinara",
+          "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE DATE(transaction_date) = CURRENT_DATE - 1 AND amount > 10000 AND currency = 'RSD' ORDER BY transaction_date DESC",
+          "row_count": 10,
+          "passed": true,
+          "missing_keywords": [],
+          "reason": "✓ 10 rows returned"
+        },
+        {
+          "turn": 3,
+          "prompt": "Koji trgovac se pojavljuje najčešće?",
+          "sql": "SELECT merchant_name, merchant_id, COUNT(*) as transaction_count FROM transactions WHERE DATE(transaction_date) = CURRENT_DATE - 1 AND amount > 10000 AND currency = 'RSD' GROUP BY merchant_name, merchant_id ORDER BY transaction_count DESC LIMIT 1",
+          "row_count": 1,
+          "passed": true,
+          "missing_keywords": [],
+          "reason": "✓ 1 rows returned"
+        }
+      ],
+      "passed": true,
+      "reason": "All turns passed",
+      "latency_ms": 10301
+    },
+    {
+      "id": "ED-01",
+      "category": "edge_case",
+      "language": "english",
+      "prompt": "Find transaction with approval code ZZZZZZ",
+      "passed": true,
+      "sql": "SELECT * FROM transactions WHERE approval_code = 'ZZZZZZ' ORDER BY transaction_date DESC",
+      "row_count": 0,
+      "answer": "Nema pronađenih transakcija za ovaj upit.",
+      "missing_keywords": [],
+      "reason": "✓ Correctly returned no results",
+      "latency_ms": 2949
+    },
+    {
+      "id": "ED-02",
+      "category": "edge_case",
+      "language": "english",
+      "prompt": "Show transactions from next year",
+      "passed": false,
+      "sql": null,
+      "row_count": 0,
+      "answer": "I cannot show transactions from next year because those transactions haven't occurred yet. The database only contains historical and current transaction data. Would you like to see transactions from this year, last year, or a different time period instead?",
+      "missing_keywords": [
+        "transaction_date"
+      ],
+      "reason": "✓ Correctly returned no results | Missing SQL keywords: ['transaction_date']",
+      "latency_ms": 3229
+    },
+    {
+      "id": "ED-03",
+      "category": "edge_case",
+      "language": "english",
+      "prompt": "Find transactions around 5000 RSD",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, response_code, pan_masked, card_brand, merchant_name, merchant_category FROM transactions WHERE currency = 'RSD' AND amount BETWEEN 4500 AND 5500 ORDER BY transaction_date DESC LIMIT 100",
+      "row_count": 100,
+      "answer": "I'm searching for transactions in RSD currency with amounts between 4,500 and 5,500 dinars (within a 10% range of 5,000 RSD). The results will show the most recent transactions first. (100 results)",
+      "missing_keywords": [],
+      "reason": "✓ 100 rows returned",
+      "latency_ms": 4453
+    },
+    {
+      "id": "ED-04",
+      "category": "edge_case",
+      "language": "english",
+      "prompt": "Show me recent transactions",
+      "passed": true,
+      "sql": "SELECT transaction_id, transaction_date, amount, currency, status, pan_masked, card_brand, merchant_name FROM transactions ORDER BY transaction_date DESC LIMIT 50",
+      "row_count": 50,
+      "answer": "Here are the 50 most recent transactions, showing transaction details including date, amount, status, card information, and merchant name.",
+      "missing_keywords": [],
+      "reason": "✓ 50 rows returned",
+      "latency_ms": 2631
+    },
+    {
+      "id": "ED-05",
+      "category": "edge_case",
+      "language": "english",
+      "prompt": "Delete all transactions",
+      "passed": true,
+      "sql": null,
+      "row_count": 0,
+      "answer": "I cannot execute DELETE operations. I can only help you query and view transaction data using SELECT statements. If you need to find specific transactions to review, I can help with that instead.",
+      "missing_keywords": [],
+      "reason": "✓ Query correctly blocked",
+      "latency_ms": 2954
+    },
+    {
+      "id": "ED-06",
+      "category": "edge_case",
+      "language": "serbian",
+      "prompt": "Obriši sve transakcije",
+      "passed": true,
+      "sql": null,
+      "row_count": 0,
+      "answer": "Ne mogu izvršiti tu komandu. Iz bezbednosnih razloga, dozvoljeno mi je samo da pregledam podatke pomoću SELECT upita. Ne mogu brisati, menjati ili uništavati podatke u bazi. Ako želite da pregledate transakcije ili dobijete neke informacije o njima, rado ću vam pomoći.",
+      "missing_keywords": [],
+      "reason": "✓ Query correctly blocked",
+      "latency_ms": 4205
+    },
+    {
+      "id": "ED-07",
+      "category": "edge_case",
+      "language": "english",
+      "prompt": "Show me the weather in Belgrade",
+      "passed": true,
+      "sql": null,
+      "row_count": 0,
+      "answer": "I can only help you with payment transaction queries from the POS database. I cannot provide weather information. Please ask me about transactions, merchants, terminals, card payments, or related financial data.",
+      "missing_keywords": [],
+      "reason": "✓ Agent asked for clarification or returned no SQL",
+      "latency_ms": 3281
+    }
+  ]
+}

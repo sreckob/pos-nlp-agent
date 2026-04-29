@@ -1,0 +1,377 @@
+[
+  {
+    "id": "EX-01",
+    "category": "exact_match",
+    "language": "english",
+    "prompt": "Find the transaction with approval code A1B2C3",
+    "expected_sql_contains": ["approval_code", "A1B2C3"],
+    "expected_result": "zero_or_more",
+    "notes": "Exact approval code lookup"
+  },
+  {
+    "id": "EX-02",
+    "category": "exact_match",
+    "language": "english",
+    "prompt": "Show me all transactions from terminal T0101",
+    "expected_sql_contains": ["terminal_id", "T0101"],
+    "expected_result": "zero_or_more",
+    "notes": "Exact terminal ID lookup"
+  },
+  {
+    "id": "EX-03",
+    "category": "exact_match",
+    "language": "english",
+    "prompt": "Find transactions with PAN ending in 1234",
+    "expected_sql_contains": ["pan_masked", "1234"],
+    "expected_result": "zero_or_more",
+    "notes": "PAN suffix lookup using ILIKE or LIKE"
+  },
+  {
+    "id": "EX-04",
+    "category": "exact_match",
+    "language": "serbian",
+    "prompt": "Pronađi transakciju sa kodom odobrenja X9Y8Z7",
+    "expected_sql_contains": ["approval_code", "X9Y8Z7"],
+    "expected_result": "zero_or_more",
+    "notes": "Serbian exact approval code lookup"
+  },
+  {
+    "id": "EX-05",
+    "category": "exact_match",
+    "language": "serbian",
+    "prompt": "Prikaži sve transakcije na terminalu T0201",
+    "expected_sql_contains": ["terminal_id", "T0201"],
+    "expected_result": "zero_or_more",
+    "notes": "Serbian terminal lookup"
+  },
+  {
+    "id": "RN-01",
+    "category": "range_query",
+    "language": "english",
+    "prompt": "Show transactions with amount between 1000 and 5000 RSD",
+    "expected_sql_contains": ["amount", "1000", "5000"],
+    "expected_result": "has_results",
+    "notes": "Amount range filter"
+  },
+  {
+    "id": "RN-02",
+    "category": "range_query",
+    "language": "english",
+    "prompt": "Find all transactions from last 7 days",
+    "expected_sql_contains": ["transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Date range — last 7 days"
+  },
+  {
+    "id": "RN-03",
+    "category": "range_query",
+    "language": "english",
+    "prompt": "Show transactions above 50000 RSD from last month",
+    "expected_sql_contains": ["amount", "50000", "transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Combined amount + date range"
+  },
+  {
+    "id": "RN-04",
+    "category": "range_query",
+    "language": "english",
+    "prompt": "Find transactions between April 1 and April 10 2026",
+    "expected_sql_contains": ["transaction_date", "2026"],
+    "expected_result": "has_results",
+    "notes": "Explicit date range"
+  },
+  {
+    "id": "RN-05",
+    "category": "range_query",
+    "language": "serbian",
+    "prompt": "Prikaži transakcije između 2000 i 10000 dinara",
+    "expected_sql_contains": ["amount", "2000", "10000"],
+    "expected_result": "has_results",
+    "notes": "Serbian amount range"
+  },
+  {
+    "id": "RN-06",
+    "category": "range_query",
+    "language": "serbian",
+    "prompt": "Koje transakcije su bile prošle sedmice?",
+    "expected_sql_contains": ["transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Serbian last week date range"
+  },
+  {
+    "id": "ST-01",
+    "category": "status_filter",
+    "language": "english",
+    "prompt": "Show me all declined transactions",
+    "expected_sql_contains": ["status", "DECLINED"],
+    "expected_result": "has_results",
+    "notes": "Basic status filter — declined"
+  },
+  {
+    "id": "ST-02",
+    "category": "status_filter",
+    "language": "english",
+    "prompt": "Find all approved transactions from today",
+    "expected_sql_contains": ["status", "APPROVED", "transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Status + date filter"
+  },
+  {
+    "id": "ST-03",
+    "category": "status_filter",
+    "language": "english",
+    "prompt": "Show reversed and pending transactions from last week",
+    "expected_sql_contains": ["status"],
+    "expected_result": "has_results",
+    "notes": "Multiple status values"
+  },
+  {
+    "id": "ST-04",
+    "category": "status_filter",
+    "language": "serbian",
+    "prompt": "Pokaži mi sve odbijene transakcije od juče",
+    "expected_sql_contains": ["status", "DECLINED", "transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Serbian declined + yesterday"
+  },
+  {
+    "id": "ST-05",
+    "category": "status_filter",
+    "language": "serbian",
+    "prompt": "Koliko odobrenih transakcija je bilo danas?",
+    "expected_sql_contains": ["status", "APPROVED", "transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Serbian approved today — count query"
+  },
+  {
+    "id": "AG-01",
+    "category": "aggregation",
+    "language": "english",
+    "prompt": "Which terminal processed the most transactions?",
+    "expected_sql_contains": ["terminal_id", "COUNT"],
+    "expected_result": "has_results",
+    "notes": "Group by terminal, count"
+  },
+  {
+    "id": "AG-02",
+    "category": "aggregation",
+    "language": "english",
+    "prompt": "What is the total transaction amount per merchant this month?",
+    "expected_sql_contains": ["merchant_name", "SUM", "amount"],
+    "expected_result": "has_results",
+    "notes": "Sum by merchant"
+  },
+  {
+    "id": "AG-03",
+    "category": "aggregation",
+    "language": "english",
+    "prompt": "Which card brand is used most frequently?",
+    "expected_sql_contains": ["card_brand", "COUNT"],
+    "expected_result": "has_results",
+    "notes": "Most frequent card brand"
+  },
+  {
+    "id": "AG-04",
+    "category": "aggregation",
+    "language": "english",
+    "prompt": "How many transactions were declined per merchant last month?",
+    "expected_sql_contains": ["merchant_name", "COUNT", "DECLINED"],
+    "expected_result": "has_results",
+    "notes": "Count declined by merchant"
+  },
+  {
+    "id": "AG-05",
+    "category": "aggregation",
+    "language": "serbian",
+    "prompt": "Koji terminal je procesirao najveći ukupan iznos transakcija?",
+    "expected_sql_contains": ["terminal_id", "SUM", "amount"],
+    "expected_result": "has_results",
+    "notes": "Serbian sum by terminal"
+  },
+  {
+    "id": "AG-06",
+    "category": "aggregation",
+    "language": "serbian",
+    "prompt": "Koliko transakcija je bilo po kategoriji trgovca prošlog meseca?",
+    "expected_sql_contains": ["merchant_category", "COUNT"],
+    "expected_result": "has_results",
+    "notes": "Serbian count by merchant category"
+  },
+  {
+    "id": "MF-01",
+    "category": "multi_filter",
+    "language": "english",
+    "prompt": "Show declined Visa contactless transactions above 5000 RSD from last week",
+    "expected_sql_contains": ["DECLINED", "VISA", "CONTACTLESS", "5000", "transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Classic multi-filter combination"
+  },
+  {
+    "id": "MF-02",
+    "category": "multi_filter",
+    "language": "english",
+    "prompt": "Find approved Mastercard credit card purchases at Maxi Supermarket",
+    "expected_sql_contains": ["APPROVED", "MASTERCARD", "CREDIT", "Maxi"],
+    "expected_result": "has_results",
+    "notes": "Brand + class + merchant filter"
+  },
+  {
+    "id": "MF-03",
+    "category": "multi_filter",
+    "language": "english",
+    "prompt": "Show corporate card transactions above 20000 RSD that were declined",
+    "expected_sql_contains": ["CORPORATE", "20000", "DECLINED"],
+    "expected_result": "has_results",
+    "notes": "Card class + amount + status"
+  },
+  {
+    "id": "MF-04",
+    "category": "multi_filter",
+    "language": "serbian",
+    "prompt": "Pokaži odbijene Visa beskontaktne transakcije iznad 5000 dinara prošle sedmice",
+    "expected_sql_contains": ["DECLINED", "VISA", "CONTACTLESS", "5000"],
+    "expected_result": "has_results",
+    "notes": "Serbian version of MF-01"
+  },
+  {
+    "id": "MF-05",
+    "category": "multi_filter",
+    "language": "serbian",
+    "prompt": "Prikaži sve UnionPay transakcije u hotelima iznad 100 EUR",
+    "expected_sql_contains": ["UNIONPAY", "HOTEL", "100", "EUR"],
+    "expected_result": "has_results",
+    "notes": "Serbian UnionPay hotel EUR transactions"
+  },
+  {
+    "id": "MT-01",
+    "category": "multi_turn",
+    "language": "english",
+    "turns": [
+      {
+        "prompt": "Show declined transactions from last month",
+        "expected_sql_contains": ["DECLINED", "transaction_date"],
+        "expected_result": "has_results"
+      },
+      {
+        "prompt": "Only Visa cards",
+        "expected_sql_contains": ["DECLINED", "VISA", "transaction_date"],
+        "expected_result": "has_results",
+        "notes": "Must retain DECLINED and date filter from turn 1"
+      },
+      {
+        "prompt": "Sort by amount descending",
+        "expected_sql_contains": ["DECLINED", "VISA", "ORDER BY", "amount", "DESC"],
+        "expected_result": "has_results",
+        "notes": "Must retain all previous filters"
+      }
+    ],
+    "notes": "3-turn refinement chain"
+  },
+  {
+    "id": "MT-02",
+    "category": "multi_turn",
+    "language": "mixed",
+    "turns": [
+      {
+        "prompt": "Show transactions at NIS Petrol above 3000 RSD",
+        "expected_sql_contains": ["NIS Petrol", "3000"],
+        "expected_result": "has_results"
+      },
+      {
+        "prompt": "Samo odbijene",
+        "expected_sql_contains": ["NIS Petrol", "3000", "DECLINED"],
+        "expected_result": "zero_or_more",
+        "notes": "Serbian refinement on English query — must retain merchant and amount"
+      }
+    ],
+    "notes": "Language switch mid-session"
+  },
+  {
+    "id": "MT-03",
+    "category": "multi_turn",
+    "language": "serbian",
+    "turns": [
+      {
+        "prompt": "Pokaži transakcije od juče",
+        "expected_sql_contains": ["transaction_date"],
+        "expected_result": "has_results"
+      },
+      {
+        "prompt": "Samo one iznad 10000 dinara",
+        "expected_sql_contains": ["transaction_date", "10000"],
+        "expected_result": "has_results",
+        "notes": "Must retain date filter"
+      },
+      {
+        "prompt": "Koji trgovac se pojavljuje najčešće?",
+        "expected_sql_contains": ["merchant_name", "COUNT", "transaction_date", "10000"],
+        "expected_result": "has_results",
+        "notes": "Aggregation on filtered set"
+      }
+    ],
+    "notes": "Serbian 3-turn with aggregation at end"
+  },
+  {
+    "id": "ED-01",
+    "category": "edge_case",
+    "language": "english",
+    "prompt": "Find transaction with approval code ZZZZZZ",
+    "expected_sql_contains": ["approval_code", "ZZZZZZ"],
+    "expected_result": "no_results",
+    "notes": "Non-existent approval code — should return empty result gracefully"
+  },
+  {
+    "id": "ED-02",
+    "category": "edge_case",
+    "language": "english",
+    "prompt": "Show transactions from next year",
+    "expected_sql_contains": ["transaction_date"],
+    "expected_result": "no_results",
+    "notes": "Future date — no data exists, should handle gracefully"
+  },
+  {
+    "id": "ED-03",
+    "category": "edge_case",
+    "language": "english",
+    "prompt": "Find transactions around 5000 RSD",
+    "expected_sql_contains": ["amount"],
+    "expected_result": "has_results",
+    "notes": "Approximate amount — agent should interpret 'around' as a range e.g. 4500-5500"
+  },
+  {
+    "id": "ED-04",
+    "category": "edge_case",
+    "language": "english",
+    "prompt": "Show me recent transactions",
+    "expected_sql_contains": ["transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Ambiguous date — agent should interpret 'recent' as last 7 or 30 days"
+  },
+  {
+    "id": "ED-05",
+    "category": "edge_case",
+    "language": "english",
+    "prompt": "Delete all transactions",
+    "expected_sql_contains": [],
+    "expected_result": "blocked",
+    "notes": "Destructive query — must be blocked by read-only guard, not executed"
+  },
+  {
+    "id": "ED-06",
+    "category": "edge_case",
+    "language": "serbian",
+    "prompt": "Obriši sve transakcije",
+    "expected_sql_contains": [],
+    "expected_result": "blocked",
+    "notes": "Serbian destructive query — must be blocked"
+  },
+  {
+    "id": "ED-07",
+    "category": "edge_case",
+    "language": "english",
+    "prompt": "Show me the weather in Belgrade",
+    "expected_sql_contains": [],
+    "expected_result": "clarification",
+    "notes": "Completely unrelated query — agent should explain it can only answer transaction questions"
+  }
+]
