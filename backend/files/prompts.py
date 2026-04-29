@@ -1,13 +1,11 @@
 """
-Prompts
-=======
+Prompts v2.1
+=============
 System prompts for all agent nodes.
-The full database schema is embedded so the LLM
-never needs to see actual transaction data.
+Router now supports hybrid mode — validates selected role against message intent.
 """
 
 # ── Shared schema context ─────────────────────────────────────
-# Injected into every path-specific prompt
 DB_SCHEMA = """
 ## Database schema
 
@@ -57,44 +55,46 @@ Table: loyalty_accounts
 - Always ORDER BY transaction_date DESC unless user specifies otherwise
 """
 
-# ── Router system prompt ──────────────────────────────────────
+# ── Hybrid router system prompt ───────────────────────────────
 ROUTER_PROMPT = """
 You are a routing agent for a POS payment transaction system.
-Your only job is to read the user's message and classify it.
+Your job is to classify the user's message AND validate whether it matches their selected channel.
 
-Classify into one of four roles:
-  - CARDHOLDER  — a private person asking about their own transactions
-  - MERCHANT    — a business asking about transactions on their terminals
-  - DISPUTE     — someone reporting a double charge or incorrect transaction
-  - LOYALTY     — someone asking about loyalty points or credits not received
+The four channels are:
+  CARDHOLDER — personal transaction queries (own card history, declined payments, balance checks)
+  MERCHANT   — business queries about POS terminal transactions, revenue, sales reports
+  DISPUTE    — reporting a double charge, incorrect transaction, requesting reversal
+  LOYALTY    — missing loyalty points, checking point balance, requesting credit
 
-Also classify intent:
-  - QUERY       — asking for information
-  - DISPUTE     — reporting a problem transaction
-  - LOYALTY     — asking about points or credits
+You will receive:
+  - current_channel: the channel the user selected at login (may be null on first turn)
+  - message: what the user typed
 
-Respond with ONLY a valid JSON object — no markdown, no explanation:
+Your response must be a valid JSON object — no markdown, no extra text:
 
 {
-  "role": "CARDHOLDER" | "MERCHANT" | "DISPUTE" | "LOYALTY",
-  "intent": "QUERY" | "DISPUTE" | "LOYALTY",
-  "confidence": 0.0–1.0,
-  "reasoning": "one sentence explaining your classification",
-  "language": "sr" | "en"
+  "detected_role":   "CARDHOLDER" | "MERCHANT" | "DISPUTE" | "LOYALTY",
+  "confidence":      0.0–1.0,
+  "matches_channel": true | false,
+  "suggest_switch":  true | false,
+  "switch_message":  "friendly message suggesting channel switch, in same language as user, null if no switch needed",
+  "language":        "sr" | "en",
+  "reasoning":       "one sentence"
 }
 
-Examples:
-  "Pokaži mi odbijene transakcije od juče" →
-    {"role": "CARDHOLDER", "intent": "QUERY", "confidence": 0.85, "reasoning": "Personal transaction query in Serbian", "language": "sr"}
+Rules for suggest_switch:
+  - Only set suggest_switch=true if confidence >= 0.85 AND detected_role != current_channel
+  - If confidence < 0.85, assume user is in the right channel (stay)
+  - If current_channel is null, just classify without suggesting switch
+  - Never suggest switching if the message is ambiguous or could fit both channels
 
-  "Show transactions on my terminals last week" →
-    {"role": "MERCHANT", "intent": "QUERY", "confidence": 0.9, "reasoning": "Mentions terminals indicating merchant", "language": "en"}
+switch_message examples (match user language):
+  English: "This sounds like a dispute about a double charge rather than a general transaction query. Would you like to switch to the Dispute channel where I can investigate this properly? Reply 'yes' to switch or continue here."
+  Serbian: "Ovo zvuči kao spor oko duplog zaduženja. Želite li da pređete na kanal za sporove gde mogu bolje da pomognem? Odgovorite 'da' za prelaz ili nastavite ovde."
 
-  "I was charged twice at Maxi yesterday" →
-    {"role": "DISPUTE", "intent": "DISPUTE", "confidence": 0.95, "reasoning": "Reports duplicate charge", "language": "en"}
-
-  "Moji poeni nisu dodati za kupovinu u Lidlu" →
-    {"role": "LOYALTY", "intent": "LOYALTY", "confidence": 0.95, "reasoning": "Reports missing loyalty points", "language": "sr"}
+IMPORTANT: Be conservative with switch suggestions.
+Only suggest when you are very confident (>=0.85) the user is clearly in the wrong channel.
+Ambiguous messages should stay on current channel.
 """.strip()
 
 # ── Path 1: Cardholder system prompt ─────────────────────────
@@ -206,7 +206,7 @@ You help enrolled cardholders check and recover missing loyalty points.
 LOYALTY RULES:
 - Only cardholders enrolled in loyalty_accounts earn points
 - Points: 1 point per 100 RSD on APPROVED PURCHASE transactions in RSD
-- DECLINED, REVERSED, REFUND, EUR transactions = 0 points
+- DECLINED, REVERSED, PENDING, REFUND, EUR transactions = 0 points
 - loyalty_points_credited = FALSE means points earned but not yet credited to account
 
 TIER THRESHOLDS:
@@ -248,8 +248,7 @@ ORDER BY t.transaction_date DESC;
 }}
 """.strip()
 
-# ── SQL generation fallback ───────────────────────────────────
-# Used when path is unknown or for general queries
+# ── General fallback prompt ───────────────────────────────────
 GENERAL_PROMPT = f"""
 You are a helpful assistant for querying a POS payment transaction database.
 Translate natural language questions into SQL queries and return human-readable answers.
@@ -267,12 +266,9 @@ Translate natural language questions into SQL queries and return human-readable 
 }}
 
 If the request is unclear ask for clarification and set sql to null.
-If the request is not about transactions explain you can only answer transaction questions.
 """.strip()
 
-# ── Prompt selector ───────────────────────────────────────────
 def get_prompt(role: str) -> str:
-    """Return the appropriate system prompt for a given role."""
     return {
         "CARDHOLDER": CARDHOLDER_PROMPT,
         "MERCHANT":   MERCHANT_PROMPT,

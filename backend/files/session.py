@@ -1,17 +1,8 @@
 """
-Session Store
-=============
+Session Store v2.2
+==================
 In-memory session management.
-Each session holds:
-  - history     : list of {role, content} messages for the LLM
-  - last_sql    : the last SQL query that was executed
-  - last_rows   : the last result set returned
-  - role        : classified user role (CARDHOLDER/MERCHANT/DISPUTE/LOYALTY)
-  - language    : detected language (sr/en)
-  - created_at  : session creation timestamp
-  - turn_count  : number of turns in this session
-
-For production, replace with Redis using the same interface.
+Tracks mismatch_count for three-strike channel enforcement.
 """
 
 from datetime import datetime
@@ -26,13 +17,15 @@ class SessionStore:
     def get_or_create(self, session_id: str) -> Dict[str, Any]:
         if session_id not in self._sessions:
             self._sessions[session_id] = {
-                "history":     [],
-                "last_sql":    None,
-                "last_rows":   [],
-                "role":        None,      # set by router on first turn
-                "language":    "en",      # default, updated by router
-                "created_at":  datetime.utcnow().isoformat(),
-                "turn_count":  0
+                "history":        [],
+                "last_sql":       None,
+                "last_rows":      [],
+                "role":           None,
+                "pending_role":   None,   # suggested switch target
+                "mismatch_count": 0,      # consecutive mismatches on same channel
+                "language":       "en",
+                "created_at":     datetime.utcnow().isoformat(),
+                "turn_count":     0
             }
         return self._sessions[session_id]
 
@@ -40,10 +33,33 @@ class SessionStore:
         return self._sessions.get(session_id)
 
     def set_role(self, session_id: str, role: str, language: str = "en"):
-        """Set the user role after router classification."""
+        """Set role and reset mismatch counter."""
         session = self.get_or_create(session_id)
-        session["role"]     = role
-        session["language"] = language
+        session["role"]           = role
+        session["language"]       = language
+        session["pending_role"]   = None
+        session["mismatch_count"] = 0   # reset on role change
+
+    def increment_mismatch(self, session_id: str) -> int:
+        """Increment mismatch counter and return new count."""
+        session = self.get_or_create(session_id)
+        session["mismatch_count"] += 1
+        return session["mismatch_count"]
+
+    def reset_mismatch(self, session_id: str):
+        """Reset mismatch counter when user matches their channel."""
+        session = self.get_or_create(session_id)
+        session["mismatch_count"] = 0
+
+    def reset_to_menu(self, session_id: str):
+        """Force reset — user returns to role selector."""
+        session = self.get_or_create(session_id)
+        session["role"]           = None
+        session["pending_role"]   = None
+        session["mismatch_count"] = 0
+        session["last_sql"]       = None
+        session["last_rows"]      = []
+        # Keep history so user sees what happened
 
     def update(
         self,
