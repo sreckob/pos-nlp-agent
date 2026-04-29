@@ -73,7 +73,6 @@ export default function App() {
   const inputRef  = useRef(null);
 
   // ── WebSocket ────────────────────────────────────────────────
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const connect = useCallback(async (sid) => {
     if (wsRef.current) wsRef.current.close();
 
@@ -132,6 +131,7 @@ export default function App() {
       () => setConnected(false)
     );
     setTimeout(() => setConnected(true), 300);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
