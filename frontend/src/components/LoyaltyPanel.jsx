@@ -2,7 +2,7 @@
 // Shown on loyalty path — displays missing points and credit action
 
 export default function LoyaltyPanel({ msg, onCredit }) {
-  const { pan_enrolled, missing_points, credit_recommended } = msg;
+  const { pan_enrolled, missing_points, credit_recommended, pan_masked } = msg;
 
   if (!pan_enrolled && !missing_points) return null;
 
@@ -28,7 +28,7 @@ export default function LoyaltyPanel({ msg, onCredit }) {
                   <p style={s.rec}>
                     {missing_points} points can be credited to your account.
                   </p>
-                  <button style={s.btn} onClick={() => onCredit(missing_points)}>
+                  <button style={s.btn} onClick={() => onCredit(pan_masked, missing_points)}>
                     ⭐ Credit {missing_points} points
                   </button>
                 </div>

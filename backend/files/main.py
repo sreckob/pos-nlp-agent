@@ -1,11 +1,15 @@
 """
-POS NLP Agent — FastAPI Backend v2.0
+POS NLP Agent — FastAPI Backend v2.1
 =====================================
 Endpoints:
-  GET  /health                    — health check
-  GET  /session/new               — generate new session ID
-  GET  /session/{id}/history      — conversation history (debug)
-  WS   /ws/{session_id}           — WebSocket chat endpoint
+  GET  /health                          — health check
+  GET  /session/new                     — generate new session ID
+  GET  /session/{id}/history            — conversation history (debug)
+  WS   /ws/{session_id}                 — WebSocket chat endpoint
+  POST /dispute/approve                 — approve dispute reversal
+  POST /dispute/reject                  — reject dispute claim
+  POST /loyalty/credit                  — credit missing loyalty points
+  GET  /loyalty/balance/{pan_masked}    — get loyalty account balance
 """
 
 import json
@@ -15,10 +19,17 @@ from datetime import datetime
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from config import settings
 from session import SessionStore
 from agent import run_agent
+from write_ops import (
+    approve_dispute_reversal,
+    reject_dispute,
+    credit_loyalty_points,
+    get_loyalty_balance,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -131,6 +142,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                     "missing_points":       result.get("missing_points", 0),
                     "credit_recommended":   result.get("credit_recommended", False),
                     "pan_enrolled":         result.get("pan_enrolled", False),
+                    "pan_masked":           result.get("pan_masked"),
                     "has_export":           result.get("export_file") is not None,
                 })
 
@@ -152,3 +164,63 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     except WebSocketDisconnect:
         logger.info(f"Session disconnected: {session_id}")
         session_store.clear(session_id)
+
+
+# ── Request models ────────────────────────────────────────────
+class DisputeApproveRequest(BaseModel):
+    original_tx_id:  str
+    duplicate_tx_id: str
+
+class DisputeRejectRequest(BaseModel):
+    duplicate_tx_id: str
+    original_tx_id:  str = None
+
+class LoyaltyCreditRequest(BaseModel):
+    pan_masked:    str
+    points_to_add: int
+
+# ── Dispute endpoints ─────────────────────────────────────────
+@app.post("/dispute/approve")
+async def dispute_approve(req: DisputeApproveRequest):
+    """Approve a dispute reversal — marks duplicate as REVERSED."""
+    logger.info(
+        f"Dispute approval: "
+        f"original={req.original_tx_id[:8]} "
+        f"duplicate={req.duplicate_tx_id[:8]}"
+    )
+    result = approve_dispute_reversal(
+        original_tx_id  = req.original_tx_id,
+        duplicate_tx_id = req.duplicate_tx_id
+    )
+    return result
+
+@app.post("/dispute/reject")
+async def dispute_reject(req: DisputeRejectRequest):
+    """Reject a dispute claim."""
+    logger.info(f"Dispute rejection: {req.duplicate_tx_id[:8]}")
+    result = reject_dispute(
+        duplicate_tx_id = req.duplicate_tx_id,
+        original_tx_id  = req.original_tx_id
+    )
+    return result
+
+# ── Loyalty endpoints ─────────────────────────────────────────
+@app.post("/loyalty/credit")
+async def loyalty_credit(req: LoyaltyCreditRequest):
+    """Credit missing loyalty points to an account."""
+    logger.info(
+        f"Loyalty credit: "
+        f"pan=...{req.pan_masked[-4:]} "
+        f"points={req.points_to_add}"
+    )
+    result = credit_loyalty_points(
+        pan_masked    = req.pan_masked,
+        points_to_add = req.points_to_add
+    )
+    return result
+
+@app.get("/loyalty/balance/{pan_masked}")
+async def loyalty_balance(pan_masked: str):
+    """Get current loyalty account balance."""
+    return get_loyalty_balance(pan_masked)
+

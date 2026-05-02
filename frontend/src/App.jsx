@@ -172,33 +172,90 @@ export default function App() {
   }
 
   // ── Dispute actions ──────────────────────────────────────────
-  function handleApprove(txId) {
-    const msg = `Approve reversal for transaction ${txId}`;
-    setMessages(prev => [...prev, {
-      id: Date.now(), role: "user", content: "✓ Approved reversal",
-      timestamp: new Date().toLocaleTimeString()
-    }]);
-    sendMessage(wsRef.current, msg);
+  async function handleApprove(originalTxId, duplicateTxId) {
+    try {
+      const res = await fetch("/dispute/approve", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          original_tx_id:  originalTxId,
+          duplicate_tx_id: duplicateTxId,
+        }),
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        id:        Date.now(),
+        role:      "assistant",
+        agentRole: "DISPUTE",
+        content:   data.success
+          ? `✓ ${data.message}`
+          : `✗ ${data.message}`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    } catch (e) {
+      setMessages(prev => [...prev, {
+        id: Date.now(), role: "assistant", agentRole: "DISPUTE",
+        content: "Could not process reversal. Please try again.",
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    }
   }
 
-  function handleReject(txId) {
-    const msg = `Reject dispute for transaction ${txId}`;
-    setMessages(prev => [...prev, {
-      id: Date.now(), role: "user", content: "✗ Rejected",
-      timestamp: new Date().toLocaleTimeString()
-    }]);
-    sendMessage(wsRef.current, msg);
+  async function handleReject(duplicateTxId, originalTxId) {
+    try {
+      const res = await fetch("/dispute/reject", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          duplicate_tx_id: duplicateTxId,
+          original_tx_id:  originalTxId,
+        }),
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        id:        Date.now(),
+        role:      "assistant",
+        agentRole: "DISPUTE",
+        content:   data.success ? "✗ Dispute rejected." : `✗ ${data.message}`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    } catch (e) {
+      setMessages(prev => [...prev, {
+        id: Date.now(), role: "assistant", agentRole: "DISPUTE",
+        content: "Could not process rejection. Please try again.",
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    }
   }
 
   // ── Loyalty credit ───────────────────────────────────────────
-  function handleCredit(points) {
-    const msg = `Credit ${points} missing loyalty points to my account`;
-    setMessages(prev => [...prev, {
-      id: Date.now(), role: "user",
-      content: `⭐ Requested credit of ${points} points`,
-      timestamp: new Date().toLocaleTimeString()
-    }]);
-    sendMessage(wsRef.current, msg);
+  async function handleCredit(panMasked, points) {
+    try {
+      const res = await fetch("/loyalty/credit", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          pan_masked:    panMasked,
+          points_to_add: points,
+        }),
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, {
+        id:        Date.now(),
+        role:      "assistant",
+        agentRole: "LOYALTY",
+        content:   data.success
+          ? `⭐ ${data.message}`
+          : `✗ ${data.message}`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    } catch (e) {
+      setMessages(prev => [...prev, {
+        id: Date.now(), role: "assistant", agentRole: "LOYALTY",
+        content: "Could not process credit. Please try again.",
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    }
   }
 
   // ── New session ───────────────────────────────────────────────

@@ -40,10 +40,12 @@ export default function DisputeCard({ msg, onApprove, onReject }) {
         <div style={s.actions}>
           <p style={s.rec}>Reversal recommended. Approve to reverse the duplicate charge.</p>
           <div style={s.btns}>
-            <button style={s.approve} onClick={() => onApprove(duplicate_tx_id)}>
+            <button style={s.approve}
+              onClick={() => onApprove(original_tx_id, duplicate_tx_id)}>
               ✓ Approve reversal
             </button>
-            <button style={s.reject} onClick={() => onReject(duplicate_tx_id)}>
+            <button style={s.reject}
+              onClick={() => onReject(duplicate_tx_id, original_tx_id)}>
               ✗ Reject
             </button>
           </div>
