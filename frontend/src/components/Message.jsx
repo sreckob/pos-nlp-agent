@@ -60,7 +60,10 @@ export default function Message({ msg, onApprove, onReject, onCredit }) {
             )}
 
             {msg.agentRole === "LOYALTY" && msg.pan_enrolled && (
-              <LoyaltyPanel msg={msg} onCredit={onCredit} />
+              <LoyaltyPanel
+                msg={{ ...msg, pan_masked: msg.pan_masked }}
+                onCredit={onCredit}
+              />
             )}
 
             {msg.has_export && (
