@@ -148,10 +148,15 @@ export default function App() {
     const text = input.trim();
     if (!text || !connected) return;
 
-    // Append receipt description if attached
-    let fullMessage = text;
-    if (receipt) {
-      fullMessage = `${text} [Receipt attached: ${receipt.filename}]`;
+    // Build image data for WebSocket if receipt attached
+    let imageData = null;
+    if (receipt && receipt.base64) {
+      // Strip the data URL prefix: "data:image/png;base64,..."
+      const parts = receipt.base64.split(",");
+      imageData = {
+        base64: parts[1] || parts[0],
+        type:   receipt.type || "image/png",
+      };
     }
 
     setMessages(prev => [...prev, {
@@ -161,7 +166,7 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString()
     }]);
 
-    sendMessage(wsRef.current, fullMessage);
+    sendMessage(wsRef.current, text, imageData);
     setInput("");
     setReceipt(null);
     inputRef.current?.focus();

@@ -95,16 +95,21 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             try:
                 data         = json.loads(raw)
                 user_message = data.get("message", "").strip()
+                image_data   = data.get("image")  # {base64, type} or None
                 # Optional: client can force a role reset
                 if data.get("reset_role"):
                     session_store.set_role(session_id, None)
             except json.JSONDecodeError:
                 user_message = raw.strip()
+                image_data   = None
 
             if not user_message:
                 continue
 
-            logger.info(f"[{session_id}] User: {user_message[:80]}")
+            logger.info(
+                f"[{session_id}] User: {user_message[:80]}"
+                + (" [+image]" if image_data else "")
+            )
 
             # Typing indicator
             await websocket.send_json({
@@ -116,7 +121,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 result = await run_agent(
                     session_id    = session_id,
                     user_message  = user_message,
-                    session_store = session_store
+                    session_store = session_store,
+                    image_data    = image_data,
                 )
 
                 await websocket.send_json({

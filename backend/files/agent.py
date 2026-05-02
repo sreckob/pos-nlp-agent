@@ -88,6 +88,9 @@ class AgentState(TypedDict):
     error:               Optional[str]
     latency_ms:          Optional[int]
 
+    # Image attachment (for dispute receipt OCR)
+    image_data:          Optional[Dict]  # {base64, type}
+
     # Path-specific
     export_requested:    bool
     dispute_found:       bool
@@ -329,8 +332,40 @@ def merchant_node(state: AgentState) -> AgentState:
 # ── NODE 2c: Dispute ──────────────────────────────────────────
 def dispute_node(state: AgentState) -> AgentState:
     try:
-        messages            = build_messages(state)
-        raw                 = call_claude(system=DISPUTE_PROMPT, messages=messages)
+        messages = build_messages(state)
+        image    = state.get("image_data")
+
+        # If image attached — use Claude Vision
+        if image and image.get("base64"):
+            # Replace last user message with vision content
+            vision_content = [
+                {
+                    "type": "image",
+                    "source": {
+                        "type":       "base64",
+                        "media_type": image.get("type", "image/png"),
+                        "data":       image["base64"],
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        f"{state['user_message']}\n\n"
+                        "Please read the receipt image above carefully. "
+                        "Extract: merchant name, amount, date, time, "
+                        "card last 4 digits, approval code. "
+                        "Then search the database for this transaction "
+                        "and check for duplicates."
+                    )
+                }
+            ]
+            # Replace last message with vision content
+            vision_messages = list(state["history"])
+            vision_messages.append({"role": "user", "content": vision_content})
+            raw = call_claude(system=DISPUTE_PROMPT, messages=vision_messages)
+        else:
+            raw = call_claude(system=DISPUTE_PROMPT, messages=messages)
+
         parsed, answer, err = safe_parse(raw)
         return {
             **state,
@@ -498,6 +533,7 @@ async def run_agent(
     session_id:    str,
     user_message:  str,
     session_store,
+    image_data:    dict = None,
 ) -> Dict[str, Any]:
 
     session = session_store.get_or_create(session_id)
@@ -516,6 +552,7 @@ async def run_agent(
         "suggest_switch":      False,
         "switch_message":      None,
         "force_reset":         False,
+        "image_data":          image_data,
         "sql":                 None,
         "db_result":           None,
         "answer":              "",

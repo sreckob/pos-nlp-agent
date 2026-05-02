@@ -11,9 +11,12 @@ export function createWebSocket(sessionId, onMessage, onError, onClose) {
   return ws;
 }
 
-export function sendMessage(ws, message) {
+export function sendMessage(ws, message, imageData = null) {
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ message }));
+    ws.send(JSON.stringify({
+      message,
+      image: imageData  // { base64, type } or null
+    }));
     return true;
   }
   return false;
