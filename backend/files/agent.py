@@ -444,6 +444,26 @@ def format_node(state: AgentState) -> AgentState:
         answer = f"Query could not be executed: {db_result['error']}"
         rows   = []
 
+    # ── Fix dispute IDs from actual DB results ────────────────
+    # Claude sometimes generates truncated/invalid UUIDs in its JSON.
+    # When we have real DB rows from the duplicate detection query,
+    # extract the actual transaction IDs directly from the result.
+    original_tx_id  = state.get("original_tx_id")
+    duplicate_tx_id = state.get("duplicate_tx_id")
+
+    if state.get("role") == "DISPUTE" and rows and len(rows) >= 1:
+        # The duplicate detection query returns rows with:
+        # transaction_id (original), dup_id (duplicate)
+        first_row = rows[0]
+        if "transaction_id" in first_row and "dup_id" in first_row:
+            original_tx_id  = first_row.get("transaction_id")
+            duplicate_tx_id = first_row.get("dup_id")
+            logger.info(
+                f"Extracted real dispute IDs from DB: "
+                f"original={str(original_tx_id)[:8]} "
+                f"duplicate={str(duplicate_tx_id)[:8]}"
+            )
+
     excel_file = None
     if state.get("export_requested") and rows:
         try:
@@ -463,10 +483,12 @@ def format_node(state: AgentState) -> AgentState:
 
     return {
         **state,
-        "answer":      answer,
-        "db_result":   {"success": True, "rows": rows, "row_count": row_count},
-        "latency_ms":  latency_ms,
-        "_excel_file": excel_file,
+        "answer":          answer,
+        "db_result":       {"success": True, "rows": rows, "row_count": row_count},
+        "latency_ms":      latency_ms,
+        "_excel_file":     excel_file,
+        "original_tx_id":  original_tx_id,
+        "duplicate_tx_id": duplicate_tx_id,
     }
 
 # ── Routing decisions ─────────────────────────────────────────
