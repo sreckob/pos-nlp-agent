@@ -9,6 +9,7 @@ Graph:
 
 import json
 import logging
+import re
 import time
 from typing import Any, Dict, List, Optional, TypedDict
 
@@ -113,12 +114,12 @@ def call_claude(system: str, messages: List[Dict], max_tokens: int = 1024) -> st
     return response.content[0].text.strip()
 
 def parse_json_response(raw: str) -> Dict:
-    if raw.startswith("```"):
-        parts = raw.split("```")
-        raw = parts[1] if len(parts) > 1 else raw
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    # Locate the outermost {...} block — robust to leading prose,
+    # ```json fences, and extra ```sql blocks around the JSON.
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
+    if not match:
+        raise ValueError("no JSON object found in response")
+    return json.loads(match.group(0))
 
 def safe_parse(raw: str) -> tuple:
     try:
