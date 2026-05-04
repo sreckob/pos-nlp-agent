@@ -12,7 +12,7 @@ const ROLE_COLORS = {
   LOYALTY:    "#D97706",
 };
 
-export default function Message({ msg, onApprove, onReject, onCredit }) {
+export default function Message({ msg, onSubmitDispute, onSubmitLoyalty }) {
   const isUser = msg.role === "user";
 
   return (
@@ -54,15 +54,14 @@ export default function Message({ msg, onApprove, onReject, onCredit }) {
             {msg.agentRole === "DISPUTE" && msg.dispute_found && (
               <DisputeCard
                 msg={msg}
-                onApprove={onApprove}
-                onReject={onReject}
+                onSubmit={onSubmitDispute}
               />
             )}
 
             {msg.agentRole === "LOYALTY" && msg.pan_enrolled && (
               <LoyaltyPanel
                 msg={{ ...msg, pan_masked: msg.pan_masked }}
-                onCredit={onCredit}
+                onSubmit={onSubmitLoyalty}
               />
             )}
 

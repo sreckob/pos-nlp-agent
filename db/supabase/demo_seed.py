@@ -222,10 +222,10 @@ def seed(conn):
         ("amex",       "M036", "Hotel Metropol Palace","HOTEL",      120.00, "EUR", today.replace(hour=12, minute=0)),
         ("amex",       "M039", "Airport Duty Free BEG","RETAIL",     45.00, "EUR", yesterday.replace(hour=18, minute=30)),
     ]
-    for card_key, m_id, m_name, cat, amt, cur, dt in recent:
+    for card_key, m_id, m_name, cat, amt, curr, dt in recent:
         rows.append(make_tx(
-            card_key, m_id, m_name, cat, amt, cur, dt,
-            loyalty_points=calc_points(amt, "APPROVED", "PURCHASE", cur)
+            card_key, m_id, m_name, cat, amt, curr, dt,
+            loyalty_points=calc_points(amt, "APPROVED", "PURCHASE", curr)
         ))
 
     # ── Insert all ────────────────────────────────────────────

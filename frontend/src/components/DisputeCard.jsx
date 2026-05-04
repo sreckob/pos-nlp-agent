@@ -1,14 +1,23 @@
 // DisputeCard.jsx
-// Shown when dispute agent finds a duplicate charge
-// Presents recommendation with Approve / Reject buttons
+// Shown when dispute investigator finds a duplicate charge.
+// Customer clicks "Submit for review" → enqueues to ops console.
 
-export default function DisputeCard({ msg, onApprove, onReject }) {
+import { useState } from "react";
+
+export default function DisputeCard({ msg, onSubmit }) {
   const { dispute_found, reversal_recommended, confidence,
           original_tx_id, duplicate_tx_id } = msg;
+
+  const [submitted, setSubmitted] = useState(false);
 
   if (!dispute_found) return null;
 
   const pct = Math.round((confidence || 0) * 100);
+
+  async function handleClick() {
+    setSubmitted(true);
+    onSubmit(original_tx_id, duplicate_tx_id, msg);
+  }
 
   return (
     <div style={s.card}>
@@ -36,19 +45,20 @@ export default function DisputeCard({ msg, onApprove, onReject }) {
         </div>
       )}
 
-      {reversal_recommended && (
+      {reversal_recommended && !submitted && (
         <div style={s.actions}>
-          <p style={s.rec}>Reversal recommended. Approve to reverse the duplicate charge.</p>
-          <div style={s.btns}>
-            <button style={s.approve}
-              onClick={() => onApprove(original_tx_id, duplicate_tx_id)}>
-              ✓ Approve reversal
-            </button>
-            <button style={s.reject}
-              onClick={() => onReject(duplicate_tx_id, original_tx_id)}>
-              ✗ Reject
-            </button>
-          </div>
+          <p style={s.rec}>
+            Click Submit for review and operations will process the reversal.
+          </p>
+          <button style={s.approve} onClick={handleClick}>
+            Submit for review
+          </button>
+        </div>
+      )}
+
+      {submitted && (
+        <div style={s.submitted}>
+          ✓ Submitted to operations. You will be notified when the review completes.
         </div>
       )}
     </div>
@@ -69,11 +79,9 @@ const s = {
              padding: "1px 6px", borderRadius: 4 },
   rec:     { fontSize: 12, color: "#9A3412", margin: "0 0 10px 0" },
   actions: {},
-  btns:    { display: "flex", gap: 8 },
-  approve: { padding: "7px 16px", borderRadius: 8, border: "none",
-             background: "#16A34A", color: "#fff", fontWeight: 600,
+  approve: { padding: "8px 18px", borderRadius: 8, border: "none",
+             background: "#9A3412", color: "#fff", fontWeight: 600,
              fontSize: 13, cursor: "pointer" },
-  reject:  { padding: "7px 16px", borderRadius: 8,
-             border: "1px solid #E2E8F0", background: "#fff",
-             color: "#64748B", fontWeight: 600, fontSize: 13, cursor: "pointer" },
+  submitted: { fontSize: 12, color: "#15803D", background: "#DCFCE7",
+               padding: "8px 12px", borderRadius: 8, marginTop: 8 },
 };
