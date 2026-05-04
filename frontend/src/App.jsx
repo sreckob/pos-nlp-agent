@@ -1,11 +1,15 @@
-// App.jsx — main chat application v2.0
-// Four-path agent UI: cardholder, merchant, dispute, loyalty
+// App.jsx — main chat application v3.0 (split-of-duties)
+// Customer chat (left) + optional Ops Approver console (right, split-screen)
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import RoleSelector  from "./components/RoleSelector";
 import Message       from "./components/Message";
 import ReceiptUpload from "./components/ReceiptUpload";
-import { createWebSocket, sendMessage, getNewSessionId } from "./api";
+import OpsConsole    from "./components/OpsConsole";
+import {
+  createWebSocket, sendMessage, getNewSessionId,
+  submitDispute, submitLoyalty,
+} from "./api";
 
 // ── Role metadata ─────────────────────────────────────────────
 const ROLE_META = {
@@ -67,6 +71,7 @@ export default function App() {
   const [connected, setConnected] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [receipt,   setReceipt]   = useState(null);   // for dispute path
+  const [opsOpen,   setOpsOpen]   = useState(false);  // split-screen toggle
 
   const wsRef     = useRef(null);
   const bottomRef = useRef(null);
@@ -126,6 +131,26 @@ export default function App() {
             timestamp: new Date().toLocaleTimeString()
           }]);
         }
+        if (data.type === "approval_decided") {
+          const isApproved = data.decision === "APPROVED";
+          const sr = data.language === "sr";
+          let body;
+          if (isApproved) {
+            const ok = data.write_result?.message;
+            body = (sr ? "✓ Vaš zahtev je odobren od strane operacija. " : "✓ Your request has been approved by operations. ")
+                 + (ok || data.audit_summary || "");
+          } else {
+            body = (sr ? "✗ Vaš zahtev je odbijen od strane operacija. " : "✗ Your request was rejected by operations. ")
+                 + (data.audit_summary || "");
+          }
+          setMessages(prev => [...prev, {
+            id:        Date.now(),
+            role:      "assistant",
+            agentRole: data.approval_type,
+            content:   body,
+            timestamp: new Date().toLocaleTimeString(),
+          }]);
+        }
       },
       () => setConnected(false),
       () => setConnected(false)
@@ -176,88 +201,53 @@ export default function App() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
-  // ── Dispute actions ──────────────────────────────────────────
-  async function handleApprove(originalTxId, duplicateTxId) {
+  // ── Submit-for-review handlers (customer → ops queue) ───────
+  async function handleSubmitDispute(originalTxId, duplicateTxId, msg) {
     try {
-      const res = await fetch("/dispute/approve", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          original_tx_id:  originalTxId,
-          duplicate_tx_id: duplicateTxId,
-        }),
+      await submitDispute({
+        customer_session_id: sessionId,
+        original_tx_id:      originalTxId,
+        duplicate_tx_id:     duplicateTxId,
+        pan_masked:          msg?.pan_masked || null,
+        amount:              msg?.amount     || null,
+        merchant_name:       msg?.merchant_name || null,
+        language:            msg?.language || "en",
       });
-      const data = await res.json();
       setMessages(prev => [...prev, {
         id:        Date.now(),
         role:      "assistant",
         agentRole: "DISPUTE",
-        content:   data.success
-          ? `✓ ${data.message}`
-          : `✗ ${data.message}`,
+        content:   "✓ Submitted to operations. You'll be notified when the review completes.",
         timestamp: new Date().toLocaleTimeString(),
       }]);
-    } catch (e) {
+    } catch {
       setMessages(prev => [...prev, {
         id: Date.now(), role: "assistant", agentRole: "DISPUTE",
-        content: "Could not process reversal. Please try again.",
+        content: "Could not submit for review. Please try again.",
         timestamp: new Date().toLocaleTimeString(),
       }]);
     }
   }
 
-  async function handleReject(duplicateTxId, originalTxId) {
+  async function handleSubmitLoyalty(panMasked, points, msg) {
     try {
-      const res = await fetch("/dispute/reject", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          duplicate_tx_id: duplicateTxId,
-          original_tx_id:  originalTxId,
-        }),
+      await submitLoyalty({
+        customer_session_id: sessionId,
+        pan_masked:          panMasked,
+        points_to_add:       points,
+        language:            msg?.language || "en",
       });
-      const data = await res.json();
-      setMessages(prev => [...prev, {
-        id:        Date.now(),
-        role:      "assistant",
-        agentRole: "DISPUTE",
-        content:   data.success ? "✗ Dispute rejected." : `✗ ${data.message}`,
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
-    } catch (e) {
-      setMessages(prev => [...prev, {
-        id: Date.now(), role: "assistant", agentRole: "DISPUTE",
-        content: "Could not process rejection. Please try again.",
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
-    }
-  }
-
-  // ── Loyalty credit ───────────────────────────────────────────
-  async function handleCredit(panMasked, points) {
-    try {
-      const res = await fetch("/loyalty/credit", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          pan_masked:    panMasked,
-          points_to_add: points,
-        }),
-      });
-      const data = await res.json();
       setMessages(prev => [...prev, {
         id:        Date.now(),
         role:      "assistant",
         agentRole: "LOYALTY",
-        content:   data.success
-          ? `⭐ ${data.message}`
-          : `✗ ${data.message}`,
+        content:   "✓ Submitted to operations. You'll be notified when the review completes.",
         timestamp: new Date().toLocaleTimeString(),
       }]);
-    } catch (e) {
+    } catch {
       setMessages(prev => [...prev, {
         id: Date.now(), role: "assistant", agentRole: "LOYALTY",
-        content: "Could not process credit. Please try again.",
+        content: "Could not submit for review. Please try again.",
         timestamp: new Date().toLocaleTimeString(),
       }]);
     }
@@ -289,14 +279,53 @@ export default function App() {
     }, 400);
   }
 
-  // ── Show role selector on startup ────────────────────────────
-  if (!role) {
-    return <RoleSelector onSelect={handleRoleSelect} />;
-  }
-
   const meta = ROLE_META[role] || ROLE_META.CARDHOLDER;
 
-  // ── Main chat UI ──────────────────────────────────────────────
+  // ── Render: top bar + main flex row (customer | ops) ─────────
+  return (
+    <div style={styles.shell}>
+      <div style={styles.topbar}>
+        <span style={styles.brand}>POS NLP Agent</span>
+        <button
+          style={{
+            ...styles.opsToggle,
+            background: opsOpen ? "#0F172A" : "#fff",
+            color:      opsOpen ? "#fff"    : "#0F172A",
+          }}
+          onClick={() => setOpsOpen(o => !o)}
+          title="Operations approver console — reviews customer submissions"
+        >
+          {opsOpen ? "✕ Close Ops Console" : "🛡 Open Ops Console"}
+        </button>
+      </div>
+      <div style={styles.row}>
+        <div style={{ ...styles.col, flex: 1 }}>
+          {!role
+            ? <RoleSelector onSelect={handleRoleSelect} />
+            : renderChat({
+                meta, messages, isTyping, connected, sessionId, role,
+                input, setInput, receipt, setReceipt, inputRef, bottomRef,
+                handleSend, handleKeyDown, handleNewSession,
+                handleSubmitDispute, handleSubmitLoyalty,
+              })
+          }
+        </div>
+        {opsOpen && (
+          <div style={{ ...styles.col, width: "45%", flexShrink: 0 }}>
+            <OpsConsole />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function renderChat({
+  meta, messages, isTyping, connected, sessionId, role,
+  input, setInput, receipt, setReceipt, inputRef, bottomRef,
+  handleSend, handleKeyDown, handleNewSession,
+  handleSubmitDispute, handleSubmitLoyalty,
+}) {
   return (
     <div style={styles.app}>
 
@@ -336,9 +365,8 @@ export default function App() {
           <Message
             key={msg.id}
             msg={msg}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onCredit={handleCredit}
+            onSubmitDispute={handleSubmitDispute}
+            onSubmitLoyalty={handleSubmitLoyalty}
           />
         ))}
 
@@ -396,8 +424,26 @@ export default function App() {
 }
 
 const styles = {
-  app: {
+  shell: {
     display: "flex", flexDirection: "column", height: "100vh",
+    fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+    background: "#F8FAFC",
+  },
+  topbar: {
+    background: "#0F172A", color: "#fff",
+    padding: "8px 18px", display: "flex",
+    justifyContent: "space-between", alignItems: "center",
+    flexShrink: 0,
+  },
+  brand: { fontSize: 13, fontWeight: 700, letterSpacing: 0.3 },
+  opsToggle: {
+    padding: "6px 14px", borderRadius: 8, border: "1px solid #334155",
+    fontWeight: 600, fontSize: 12, cursor: "pointer",
+  },
+  row: { flex: 1, display: "flex", overflow: "hidden" },
+  col: { display: "flex", flexDirection: "column", overflow: "hidden", height: "100%" },
+  app: {
+    display: "flex", flexDirection: "column", height: "100%",
     fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
     background: "#F8FAFC",
   },

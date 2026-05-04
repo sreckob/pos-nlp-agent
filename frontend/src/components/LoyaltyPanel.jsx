@@ -1,10 +1,19 @@
 // LoyaltyPanel.jsx
-// Shown on loyalty path — displays missing points and credit action
+// Shown on loyalty path — displays missing points.
+// Customer clicks "Submit for review" → enqueues to ops console.
 
-export default function LoyaltyPanel({ msg, onCredit }) {
+import { useState } from "react";
+
+export default function LoyaltyPanel({ msg, onSubmit }) {
   const { pan_enrolled, missing_points, credit_recommended, pan_masked } = msg;
+  const [submitted, setSubmitted] = useState(false);
 
   if (!pan_enrolled && !missing_points) return null;
+
+  function handleClick() {
+    setSubmitted(true);
+    onSubmit(pan_masked, missing_points, msg);
+  }
 
   return (
     <div style={s.card}>
@@ -23,14 +32,19 @@ export default function LoyaltyPanel({ msg, onCredit }) {
                 <span style={s.label}>Missing points</span>
                 <span style={s.points}>{missing_points.toLocaleString()}</span>
               </div>
-              {credit_recommended && (
+              {credit_recommended && !submitted && (
                 <div style={s.actions}>
                   <p style={s.rec}>
-                    {missing_points} points can be credited to your account.
+                    Click Submit for review and operations will credit {missing_points} points.
                   </p>
-                  <button style={s.btn} onClick={() => onCredit(pan_masked, missing_points)}>
-                    ⭐ Credit {missing_points} points
+                  <button style={s.btn} onClick={handleClick}>
+                    Submit for review
                   </button>
+                </div>
+              )}
+              {submitted && (
+                <div style={s.submitted}>
+                  ✓ Submitted to operations. You will be notified when the review completes.
                 </div>
               )}
             </>
@@ -56,7 +70,9 @@ const s = {
   text:      { fontSize: 12, color: "#92400E", margin: 0 },
   rec:       { fontSize: 12, color: "#92400E", margin: "0 0 10px 0" },
   actions:   {},
-  btn:       { padding: "7px 16px", borderRadius: 8, border: "none",
+  btn:       { padding: "8px 18px", borderRadius: 8, border: "none",
                background: "#D97706", color: "#fff", fontWeight: 600,
                fontSize: 13, cursor: "pointer" },
+  submitted: { fontSize: 12, color: "#15803D", background: "#DCFCE7",
+               padding: "8px 12px", borderRadius: 8, marginTop: 6 },
 };
