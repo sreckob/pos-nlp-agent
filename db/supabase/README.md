@@ -1,4 +1,4 @@
-# POS Transaction Database — Setup Guide
+_# POS Transaction Database — Setup Guide
 
 ## Files in this folder
 
