@@ -373,5 +373,185 @@
     "expected_sql_contains": [],
     "expected_result": "clarification",
     "notes": "Completely unrelated query — agent should explain it can only answer transaction questions"
+  },
+
+  {
+    "id": "CH-01",
+    "category": "cardholder",
+    "language": "english",
+    "prompt": "Show my transactions for card ending in 4242",
+    "expected_sql_contains": ["pan_masked", "4242"],
+    "expected_result": "has_results",
+    "notes": "Basic cardholder PAN lookup — requires seeded data for 4242"
+  },
+  {
+    "id": "CH-02",
+    "category": "cardholder",
+    "language": "english",
+    "prompt": "Show me declined transactions on my card ending in 5555",
+    "expected_sql_contains": ["pan_masked", "5555", "DECLINED"],
+    "expected_result": "zero_or_more",
+    "notes": "Cardholder declined filter — PAN isolation + status"
+  },
+  {
+    "id": "CH-03",
+    "category": "cardholder",
+    "language": "serbian",
+    "prompt": "Prikaži mi transakcije za karticu koja se završava sa 1111",
+    "expected_sql_contains": ["pan_masked", "1111"],
+    "expected_result": "has_results",
+    "notes": "Serbian cardholder PAN lookup for DINACARD demo card"
+  },
+  {
+    "id": "CH-04",
+    "category": "cardholder",
+    "language": "english",
+    "prompt": "Show contactless payments over 1000 RSD on my card ending in 4242 last month",
+    "expected_sql_contains": ["pan_masked", "4242", "CONTACTLESS", "1000"],
+    "expected_result": "zero_or_more",
+    "notes": "Cardholder multi-filter: PAN + card_type + amount + date"
+  },
+
+  {
+    "id": "ME-01",
+    "category": "merchant",
+    "language": "english",
+    "prompt": "Show all transactions at Maxi Supermarket last week",
+    "expected_sql_contains": ["merchant_name", "Maxi"],
+    "expected_result": "has_results",
+    "notes": "Merchant name filter — Maxi seeded in demo data"
+  },
+  {
+    "id": "ME-02",
+    "category": "merchant",
+    "language": "english",
+    "prompt": "How many declined transactions did my terminals have this month and what was the total amount?",
+    "expected_sql_contains": ["DECLINED", "COUNT", "SUM"],
+    "expected_result": "has_results",
+    "notes": "Merchant aggregate: declined count + sum"
+  },
+  {
+    "id": "ME-03",
+    "category": "merchant",
+    "language": "english",
+    "prompt": "Show last 50 transactions at Gigatron and export to Excel",
+    "expected_sql_contains": ["Gigatron"],
+    "expected_result": "has_results",
+    "expected_flags": {"has_export": true},
+    "notes": "Merchant Excel export — export_requested flag must be true"
+  },
+  {
+    "id": "ME-04",
+    "category": "merchant",
+    "language": "serbian",
+    "prompt": "Prikaži ukupan promet po danima za prošlu nedelju, sortiraj po danu",
+    "expected_sql_contains": ["GROUP BY", "transaction_date"],
+    "expected_result": "has_results",
+    "notes": "Serbian merchant daily revenue grouped by date"
+  },
+
+  {
+    "id": "DI-01",
+    "category": "dispute",
+    "language": "english",
+    "prompt": "I was charged twice at Maxi for my Visa card ending in 4242, amount 3240.50 RSD",
+    "expected_sql_contains": ["pan_masked", "4242", "3240.50"],
+    "expected_result": "dispute_found",
+    "notes": "Core dispute detection — requires demo_seed.py duplicate pair for 4242 at Maxi"
+  },
+  {
+    "id": "DI-02",
+    "category": "dispute",
+    "language": "english",
+    "prompt": "I was charged twice at NIS Petrol for card ending in 5555, amount 4500 RSD",
+    "expected_sql_contains": ["pan_masked", "5555"],
+    "expected_result": "dispute_found",
+    "notes": "NIS Petrol duplicate pair — requires demo_seed.py for 5555"
+  },
+  {
+    "id": "DI-03",
+    "category": "dispute",
+    "language": "english",
+    "prompt": "I was charged twice at a restaurant for card 4242, amount 99999 RSD yesterday",
+    "expected_sql_contains": ["pan_masked", "4242"],
+    "expected_result": "no_dispute",
+    "notes": "False positive — amount does not match any seeded duplicate, agent should report no duplicate found"
+  },
+  {
+    "id": "DI-04",
+    "category": "dispute",
+    "language": "serbian",
+    "prompt": "Dvaput su mi naplatili u Gigatronu, kartica 1111, iznos 42500 dinara",
+    "expected_sql_contains": ["pan_masked", "1111"],
+    "expected_result": "dispute_found",
+    "notes": "Serbian dispute — Gigatron duplicate pair for card 1111 from demo_seed.py"
+  },
+
+  {
+    "id": "LO-01",
+    "category": "loyalty",
+    "language": "english",
+    "prompt": "Check my loyalty points for card ending in 4242",
+    "expected_sql_contains": ["pan_masked", "4242", "loyalty_accounts"],
+    "expected_result": "enrolled",
+    "notes": "Enrolled card — VISA Silver demo account should be found"
+  },
+  {
+    "id": "LO-02",
+    "category": "loyalty",
+    "language": "english",
+    "prompt": "My points were not credited for card ending in 4242",
+    "expected_sql_contains": ["pan_masked", "4242", "loyalty_points_credited"],
+    "expected_result": "credit_recommended",
+    "notes": "Missing points detection — requires demo_seed.py uncredited transactions for 4242"
+  },
+  {
+    "id": "LO-03",
+    "category": "loyalty",
+    "language": "english",
+    "prompt": "Check loyalty points for card ending in 0000",
+    "expected_sql_contains": ["pan_masked", "0000"],
+    "expected_result": "not_enrolled",
+    "notes": "Non-enrolled card — agent should report PAN not in loyalty_accounts"
+  },
+  {
+    "id": "LO-04",
+    "category": "loyalty",
+    "language": "serbian",
+    "prompt": "Moji poeni nisu dodati za karticu 1111",
+    "expected_sql_contains": ["pan_masked", "1111", "loyalty_points_credited"],
+    "expected_result": "credit_recommended",
+    "notes": "Serbian missing points — DINACARD Gold demo card"
+  },
+
+  {
+    "id": "RT-01",
+    "category": "router",
+    "language": "english",
+    "prompt": "I was charged twice at Maxi for card 4242",
+    "expected_sql_contains": [],
+    "expected_result": "suggest_switch",
+    "router_current_channel": "CARDHOLDER",
+    "notes": "Dispute intent on Cardholder channel — router should suggest switch (strike 1)"
+  },
+  {
+    "id": "RT-02",
+    "category": "router",
+    "language": "serbian",
+    "prompt": "Nedostaju mi poeni za karticu 4242",
+    "expected_sql_contains": [],
+    "expected_result": "suggest_switch",
+    "router_current_channel": "MERCHANT",
+    "notes": "Loyalty intent on Merchant channel — router should suggest switch"
+  },
+  {
+    "id": "RT-03",
+    "category": "router",
+    "language": "english",
+    "prompt": "Show my declined transactions for card 4242",
+    "expected_sql_contains": ["pan_masked", "4242", "DECLINED"],
+    "expected_result": "zero_or_more",
+    "router_current_channel": "CARDHOLDER",
+    "notes": "Correct channel — Cardholder query stays on Cardholder, no switch suggested"
   }
 ]
