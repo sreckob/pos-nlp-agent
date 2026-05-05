@@ -1,10 +1,23 @@
 // LoyaltyPanel.jsx
-// Shown on loyalty path — displays missing points and credit action
+// Shown on loyalty path — displays missing points.
+// Customer clicks "Submit for review" → App.jsx confirms in chat.
 
-export default function LoyaltyPanel({ msg, onCredit }) {
+import { useState } from "react";
+
+export default function LoyaltyPanel({ msg, onSubmit }) {
   const { pan_enrolled, missing_points, credit_recommended, pan_masked } = msg;
+  const [busy, setBusy] = useState(false);
 
   if (!pan_enrolled && !missing_points) return null;
+
+  async function handleClick() {
+    setBusy(true);
+    try {
+      await onSubmit(pan_masked, missing_points, msg);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div style={s.card}>
@@ -26,10 +39,10 @@ export default function LoyaltyPanel({ msg, onCredit }) {
               {credit_recommended && (
                 <div style={s.actions}>
                   <p style={s.rec}>
-                    {missing_points} points can be credited to your account.
+                    Click Submit for review and operations will credit {missing_points} points.
                   </p>
-                  <button style={s.btn} onClick={() => onCredit(pan_masked, missing_points)}>
-                    ⭐ Credit {missing_points} points
+                  <button style={s.btn} onClick={handleClick} disabled={busy}>
+                    {busy ? "Submitting…" : "Submit for review"}
                   </button>
                 </div>
               )}
@@ -56,7 +69,9 @@ const s = {
   text:      { fontSize: 12, color: "#92400E", margin: 0 },
   rec:       { fontSize: 12, color: "#92400E", margin: "0 0 10px 0" },
   actions:   {},
-  btn:       { padding: "7px 16px", borderRadius: 8, border: "none",
+  btn:       { padding: "8px 18px", borderRadius: 8, border: "none",
                background: "#D97706", color: "#fff", fontWeight: 600,
                fontSize: 13, cursor: "pointer" },
+  submitted: { fontSize: 12, color: "#15803D", background: "#DCFCE7",
+               padding: "8px 12px", borderRadius: 8, marginTop: 6 },
 };
