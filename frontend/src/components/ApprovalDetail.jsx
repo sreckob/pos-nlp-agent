@@ -12,9 +12,13 @@ export default function ApprovalDetail({ approvalId, onDecided }) {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
     setResult(null);
     setDetail(null);
+    if (!approvalId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     fetchPendingDetail(approvalId)
       .then(d => { if (alive) { setDetail(d); setLoading(false); } })
       .catch(() => { if (alive) setLoading(false); });

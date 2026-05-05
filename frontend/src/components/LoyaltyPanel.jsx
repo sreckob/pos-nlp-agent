@@ -1,18 +1,22 @@
 // LoyaltyPanel.jsx
 // Shown on loyalty path — displays missing points.
-// Customer clicks "Submit for review" → enqueues to ops console.
+// Customer clicks "Submit for review" → App.jsx confirms in chat.
 
 import { useState } from "react";
 
 export default function LoyaltyPanel({ msg, onSubmit }) {
   const { pan_enrolled, missing_points, credit_recommended, pan_masked } = msg;
-  const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   if (!pan_enrolled && !missing_points) return null;
 
-  function handleClick() {
-    setSubmitted(true);
-    onSubmit(pan_masked, missing_points, msg);
+  async function handleClick() {
+    setBusy(true);
+    try {
+      await onSubmit(pan_masked, missing_points, msg);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -32,19 +36,14 @@ export default function LoyaltyPanel({ msg, onSubmit }) {
                 <span style={s.label}>Missing points</span>
                 <span style={s.points}>{missing_points.toLocaleString()}</span>
               </div>
-              {credit_recommended && !submitted && (
+              {credit_recommended && (
                 <div style={s.actions}>
                   <p style={s.rec}>
                     Click Submit for review and operations will credit {missing_points} points.
                   </p>
-                  <button style={s.btn} onClick={handleClick}>
-                    Submit for review
+                  <button style={s.btn} onClick={handleClick} disabled={busy}>
+                    {busy ? "Submitting…" : "Submit for review"}
                   </button>
-                </div>
-              )}
-              {submitted && (
-                <div style={s.submitted}>
-                  ✓ Submitted to operations. You will be notified when the review completes.
                 </div>
               )}
             </>

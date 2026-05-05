@@ -230,9 +230,9 @@ class DisputeSubmitRequest(BaseModel):
     language:            str = "en"
 
 class LoyaltySubmitRequest(BaseModel):
-    customer_session_id: str
-    pan_masked:          str
-    points_to_add:       int
+    customer_session_id: Optional[str] = None
+    pan_masked:          Optional[str] = None
+    points_to_add:       Optional[int] = None
     language:            str = "en"
 
 class OpsDecideRequest(BaseModel):
@@ -281,11 +281,16 @@ async def dispute_submit(req: DisputeSubmitRequest):
 @app.post("/loyalty/submit")
 async def loyalty_submit(req: LoyaltySubmitRequest):
     """Customer submits loyalty credit request for ops review."""
+    logger.info(
+        f"/loyalty/submit received: pan='{req.pan_masked}' "
+        f"points={req.points_to_add} "
+        f"session={req.customer_session_id[:8] if req.customer_session_id else None}"
+    )
     if not req.customer_session_id:
         raise HTTPException(status_code=400, detail="customer_session_id required")
     if not req.pan_masked:
-        raise HTTPException(status_code=400, detail="pan_masked required")
-    if req.points_to_add <= 0:
+        raise HTTPException(status_code=400, detail="pan_masked missing — agent did not propagate it; ask the customer to repeat the card number")
+    if not req.points_to_add or req.points_to_add <= 0:
         raise HTTPException(status_code=400, detail="points_to_add must be > 0")
 
     payload = {

@@ -8,15 +8,19 @@ export default function DisputeCard({ msg, onSubmit }) {
   const { dispute_found, reversal_recommended, confidence,
           original_tx_id, duplicate_tx_id } = msg;
 
-  const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   if (!dispute_found) return null;
 
   const pct = Math.round((confidence || 0) * 100);
 
   async function handleClick() {
-    setSubmitted(true);
-    onSubmit(original_tx_id, duplicate_tx_id, msg);
+    setBusy(true);
+    try {
+      await onSubmit(original_tx_id, duplicate_tx_id, msg);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -45,20 +49,14 @@ export default function DisputeCard({ msg, onSubmit }) {
         </div>
       )}
 
-      {reversal_recommended && !submitted && (
+      {reversal_recommended && (
         <div style={s.actions}>
           <p style={s.rec}>
             Click Submit for review and operations will process the reversal.
           </p>
-          <button style={s.approve} onClick={handleClick}>
-            Submit for review
+          <button style={s.approve} onClick={handleClick} disabled={busy}>
+            {busy ? "Submitting…" : "Submit for review"}
           </button>
-        </div>
-      )}
-
-      {submitted && (
-        <div style={s.submitted}>
-          ✓ Submitted to operations. You will be notified when the review completes.
         </div>
       )}
     </div>
