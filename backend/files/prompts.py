@@ -259,6 +259,7 @@ SELECT
     t.transaction_date,
     t.amount,
     t.merchant_name,
+    t.pan_masked,
     t.loyalty_points_earned,
     t.loyalty_points_credited
 FROM transactions t
@@ -267,6 +268,8 @@ WHERE t.pan_masked ILIKE '%XXXX'
   AND t.loyalty_points_earned > 0
   AND t.loyalty_points_credited = FALSE
 ORDER BY t.transaction_date DESC;
+-- ALWAYS include pan_masked in your SELECT — the UI needs it to submit
+-- a credit request. Otherwise the Submit button will fail.
 
 ## Your behaviour
 1. User may write in Serbian or English — respond in the same language
@@ -279,10 +282,19 @@ ORDER BY t.transaction_date DESC;
   "sql": "SELECT ...",
   "answer": "Human readable answer with points details",
   "pan_enrolled": true | false,
+  "pan_masked": "411111******4242 or null",
   "missing_points": 0,
   "transactions_affected": 0,
   "credit_recommended": true | false
 }}
+
+CRITICAL RULES — never hallucinate missing points:
+- If you are unsure whether the SQL will return matching rows, set
+  credit_recommended=false and missing_points=0. The system overrides
+  these flags whenever the SQL returns 0 rows or the row sums don't
+  match, so your JSON MUST be honest.
+- Always set pan_masked to the full masked PAN (e.g. "411111******4242")
+  when known — the customer's last 4 digits alone are not enough.
 """.strip()
 
 # ── General fallback prompt ───────────────────────────────────

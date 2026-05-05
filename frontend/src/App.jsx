@@ -109,6 +109,8 @@ export default function App() {
             pan_enrolled:         data.pan_enrolled,
             missing_points:       data.missing_points,
             credit_recommended:   data.credit_recommended,
+            pan_masked:           data.pan_masked,
+            language:             data.language,
             has_export:           data.has_export,
           }]);
           // Auto-update role badge in UI if switch was confirmed
@@ -220,10 +222,10 @@ export default function App() {
         content:   "✓ Submitted to operations. You'll be notified when the review completes.",
         timestamp: new Date().toLocaleTimeString(),
       }]);
-    } catch {
+    } catch (err) {
       setMessages(prev => [...prev, {
         id: Date.now(), role: "assistant", agentRole: "DISPUTE",
-        content: "Could not submit for review. Please try again.",
+        content: "Could not submit for review: " + (err?.message || "unknown error"),
         timestamp: new Date().toLocaleTimeString(),
       }]);
     }
@@ -244,10 +246,10 @@ export default function App() {
         content:   "✓ Submitted to operations. You'll be notified when the review completes.",
         timestamp: new Date().toLocaleTimeString(),
       }]);
-    } catch {
+    } catch (err) {
       setMessages(prev => [...prev, {
         id: Date.now(), role: "assistant", agentRole: "LOYALTY",
-        content: "Could not submit for review. Please try again.",
+        content: "Could not submit for review: " + (err?.message || "unknown error"),
         timestamp: new Date().toLocaleTimeString(),
       }]);
     }

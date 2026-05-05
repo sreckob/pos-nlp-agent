@@ -102,6 +102,7 @@ class AgentState(TypedDict):
     missing_points:      int
     credit_recommended:  bool
     pan_enrolled:        bool
+    pan_masked:          Optional[str]
 
 # ── Helpers ───────────────────────────────────────────────────
 def call_claude(system: str, messages: List[Dict], max_tokens: int = 1024) -> str:
@@ -408,6 +409,7 @@ def loyalty_node(state: AgentState) -> AgentState:
             "pan_enrolled":       parsed.get("pan_enrolled", False) if parsed else False,
             "missing_points":     parsed.get("missing_points", 0) if parsed else 0,
             "credit_recommended": parsed.get("credit_recommended", False) if parsed else False,
+            "pan_masked":         parsed.get("pan_masked") if parsed else None,
             "error":              err,
         }
     except Exception as e:
@@ -528,10 +530,61 @@ def format_node(state: AgentState) -> AgentState:
             original_tx_id       = None
             duplicate_tx_id      = None
 
+    pan_masked = state.get("pan_masked")
+
     if state.get("role") == "LOYALTY":
         if not rows:
             credit_recommended = False
             missing_points     = 0
+        else:
+            logger.info(
+                f"LOYALTY format: row[0] keys={list(rows[0].keys())} "
+                f"claude.pan_masked={pan_masked}"
+            )
+            # Sum uncredited points from DB rows. If the SELECT pulled
+            # loyalty_points_earned + loyalty_points_credited, we know the
+            # gap exactly — trust the DB over Claude's flags.
+            first = rows[0]
+            if "loyalty_points_earned" in first:
+                gap_rows = [
+                    r for r in rows
+                    if r.get("loyalty_points_credited") is False
+                    and (r.get("loyalty_points_earned") or 0) > 0
+                ]
+                if gap_rows:
+                    db_missing = sum(
+                        int(r.get("loyalty_points_earned") or 0) for r in gap_rows
+                    )
+                    missing_points     = db_missing
+                    credit_recommended = True
+
+            # Extract pan_masked from rows if Claude didn't put it in JSON.
+            if not pan_masked and "pan_masked" in first:
+                pan_masked = first.get("pan_masked")
+
+        # Last-ditch: try to recover pan_masked from the SQL text.
+        if not pan_masked and state.get("sql"):
+            m = re.search(
+                r"pan_masked\s*(?:ILIKE|=)\s*'([^']+)'",
+                state["sql"], re.IGNORECASE
+            )
+            if m:
+                tail = m.group(1).replace("%", "")
+                # If we only got the last 4 digits, look up the full masked
+                # PAN in loyalty_accounts so /loyalty/submit can match exactly.
+                if len(tail) <= 6:
+                    safe = re.sub(r"[^0-9]", "", tail)
+                    if safe:
+                        from executor import execute_query
+                        r = execute_query(
+                            f"SELECT pan_masked FROM loyalty_accounts "
+                            f"WHERE pan_masked ILIKE '%{safe}'"
+                        )
+                        if r.get("rows"):
+                            pan_masked = r["rows"][0].get("pan_masked")
+                else:
+                    pan_masked = tail
+        logger.info(f"LOYALTY format: final pan_masked={pan_masked}")
 
     excel_file = None
     if state.get("export_requested") and rows:
@@ -563,6 +616,7 @@ def format_node(state: AgentState) -> AgentState:
         "pan_enrolled":         pan_enrolled,
         "credit_recommended":   credit_recommended,
         "missing_points":       missing_points,
+        "pan_masked":           pan_masked,
     }
 
 # ── Routing decisions ─────────────────────────────────────────
@@ -712,5 +766,6 @@ async def run_agent(
         "missing_points":       final_state.get("missing_points", 0),
         "credit_recommended":   final_state.get("credit_recommended", False),
         "pan_enrolled":         final_state.get("pan_enrolled", False),
+        "pan_masked":           final_state.get("pan_masked"),
         "export_file":          final_state.get("_excel_file"),
     }
