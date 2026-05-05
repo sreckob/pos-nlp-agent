@@ -102,6 +102,7 @@ class AgentState(TypedDict):
     missing_points:      int
     credit_recommended:  bool
     pan_enrolled:        bool
+    pan_masked:          Optional[str]
 
 # ── Helpers ───────────────────────────────────────────────────
 def call_claude(system: str, messages: List[Dict], max_tokens: int = 1024) -> str:
@@ -126,7 +127,18 @@ def safe_parse(raw: str) -> tuple:
         parsed = parse_json_response(raw)
         return parsed, parsed.get("answer", raw), None
     except (json.JSONDecodeError, ValueError, KeyError):
-        return None, raw, "no_sql"
+        # Strip fenced code blocks so SQL/JSON doesn't leak to the chat.
+        cleaned = re.sub(r"```[\w]*\n?.*?```", "", raw, flags=re.DOTALL).strip()
+        # If the remaining text still looks like SQL, replace with a
+        # safe generic message rather than dumping it into the bubble.
+        if re.search(r"\bSELECT\b|\bFROM\b|\bWHERE\b|\bJOIN\b", cleaned, re.IGNORECASE):
+            cleaned = (
+                "I had trouble preparing that response. "
+                "Could you rephrase your request?"
+            )
+        elif not cleaned:
+            cleaned = "Sorry, I couldn't process that. Please try again."
+        return None, cleaned, "no_sql"
 
 def build_messages(state: AgentState) -> List[Dict]:
     messages = list(state["history"])
@@ -397,6 +409,7 @@ def loyalty_node(state: AgentState) -> AgentState:
             "pan_enrolled":       parsed.get("pan_enrolled", False) if parsed else False,
             "missing_points":     parsed.get("missing_points", 0) if parsed else 0,
             "credit_recommended": parsed.get("credit_recommended", False) if parsed else False,
+            "pan_masked":         parsed.get("pan_masked") if parsed else None,
             "error":              err,
         }
     except Exception as e:
@@ -434,11 +447,33 @@ def format_node(state: AgentState) -> AgentState:
     latency_ms = int((time.time() - state["start_time"]) * 1000)
 
     if db_result.get("success") and row_count == 0:
-        answer = (
-            "Nema pronađenih transakcija za ovaj upit."
-            if state.get("language") == "sr"
-            else "No transactions found matching your query."
-        )
+        is_sr   = state.get("language") == "sr"
+        is_disp = state.get("role") == "DISPUTE"
+        is_loy  = state.get("role") == "LOYALTY"
+        if is_disp:
+            answer = (
+                "Nisam pronašao duplikat zaduženja za navedene podatke. "
+                "Ako možete, pošaljite naziv prodavca ili približan datum "
+                "i pokušaću ponovo."
+                if is_sr else
+                "I could not find a duplicate charge for those details. "
+                "If you can, share the merchant name or the approximate date "
+                "and I'll search again."
+            )
+        elif is_loy:
+            answer = (
+                "Nema nekreditiranih poena za ovu karticu. Da li je tačan "
+                "broj kartice (poslednje 4 cifre)?"
+                if is_sr else
+                "No uncredited points were found for that card. "
+                "Could you confirm the card last 4 digits?"
+            )
+        else:
+            answer = (
+                "Nema pronađenih transakcija za ovaj upit."
+                if is_sr else
+                "No transactions found matching your query."
+            )
     elif db_result.get("success") and str(row_count) not in answer:
         answer = f"{answer} ({row_count} result{'s' if row_count != 1 else ''})"
     elif not db_result.get("success") and db_result.get("error"):
@@ -451,19 +486,100 @@ def format_node(state: AgentState) -> AgentState:
     # extract the actual transaction IDs directly from the result.
     original_tx_id  = state.get("original_tx_id")
     duplicate_tx_id = state.get("duplicate_tx_id")
+    dispute_found        = state.get("dispute_found", False)
+    reversal_recommended = state.get("reversal_recommended", False)
+    pan_enrolled         = state.get("pan_enrolled", False)
+    credit_recommended   = state.get("credit_recommended", False)
+    missing_points       = state.get("missing_points", 0)
 
-    if state.get("role") == "DISPUTE" and rows and len(rows) >= 1:
-        # The duplicate detection query returns rows with:
-        # transaction_id (original), dup_id (duplicate)
-        first_row = rows[0]
-        if "transaction_id" in first_row and "dup_id" in first_row:
-            original_tx_id  = first_row.get("transaction_id")
-            duplicate_tx_id = first_row.get("dup_id")
-            logger.info(
-                f"Extracted real dispute IDs from DB: "
-                f"original={str(original_tx_id)[:8]} "
-                f"duplicate={str(duplicate_tx_id)[:8]}"
+    if state.get("role") == "DISPUTE":
+        if rows and len(rows) >= 1:
+            first_row = rows[0]
+            # Pattern A: SQL used the t1/t2 self-join → row has dup_id
+            if "transaction_id" in first_row and "dup_id" in first_row:
+                original_tx_id  = first_row.get("transaction_id")
+                duplicate_tx_id = first_row.get("dup_id")
+            # Pattern B: SQL returned the duplicate pair as two separate rows
+            elif len(rows) >= 2 and "transaction_id" in first_row \
+                    and "transaction_id" in rows[1]:
+                original_tx_id  = first_row.get("transaction_id")
+                duplicate_tx_id = rows[1].get("transaction_id")
+            # When we have a real pair, force the flags ON so the UI
+            # always offers a Submit button. The investigator agent is
+            # sometimes too conservative even when the DB confirms.
+            if original_tx_id and duplicate_tx_id and \
+                    original_tx_id != duplicate_tx_id:
+                dispute_found        = True
+                reversal_recommended = True
+                logger.info(
+                    f"Extracted real dispute IDs from DB: "
+                    f"original={str(original_tx_id)[:8]} "
+                    f"duplicate={str(duplicate_tx_id)[:8]}"
+                )
+            else:
+                # SQL ran but didn't produce a usable pair.
+                dispute_found        = False
+                reversal_recommended = False
+                original_tx_id       = None
+                duplicate_tx_id      = None
+        else:
+            # No rows → SQL found no duplicate. Override Claude's flags so
+            # the UI does not render a hallucinated DisputeCard.
+            dispute_found        = False
+            reversal_recommended = False
+            original_tx_id       = None
+            duplicate_tx_id      = None
+
+    pan_masked = state.get("pan_masked")
+
+    if state.get("role") == "LOYALTY":
+        if not rows:
+            credit_recommended = False
+            missing_points     = 0
+        else:
+            # Sum uncredited points from DB rows. If the SELECT pulled
+            # loyalty_points_earned + loyalty_points_credited, we know the
+            # gap exactly — trust the DB over Claude's flags.
+            first = rows[0]
+            if "loyalty_points_earned" in first:
+                gap_rows = [
+                    r for r in rows
+                    if r.get("loyalty_points_credited") is False
+                    and (r.get("loyalty_points_earned") or 0) > 0
+                ]
+                if gap_rows:
+                    db_missing = sum(
+                        int(r.get("loyalty_points_earned") or 0) for r in gap_rows
+                    )
+                    missing_points     = db_missing
+                    credit_recommended = True
+
+            # Extract pan_masked from rows if Claude didn't put it in JSON.
+            if not pan_masked and "pan_masked" in first:
+                pan_masked = first.get("pan_masked")
+
+        # Last-ditch: try to recover pan_masked from the SQL text.
+        if not pan_masked and state.get("sql"):
+            m = re.search(
+                r"pan_masked\s*(?:ILIKE|=)\s*'([^']+)'",
+                state["sql"], re.IGNORECASE
             )
+            if m:
+                tail = m.group(1).replace("%", "")
+                # If we only got the last 4 digits, look up the full masked
+                # PAN in loyalty_accounts so /loyalty/submit can match exactly.
+                if len(tail) <= 6:
+                    safe = re.sub(r"[^0-9]", "", tail)
+                    if safe:
+                        from executor import execute_query
+                        r = execute_query(
+                            f"SELECT pan_masked FROM loyalty_accounts "
+                            f"WHERE pan_masked ILIKE '%{safe}'"
+                        )
+                        if r.get("rows"):
+                            pan_masked = r["rows"][0].get("pan_masked")
+                else:
+                    pan_masked = tail
 
     excel_file = None
     if state.get("export_requested") and rows:
@@ -484,12 +600,18 @@ def format_node(state: AgentState) -> AgentState:
 
     return {
         **state,
-        "answer":          answer,
-        "db_result":       {"success": True, "rows": rows, "row_count": row_count},
-        "latency_ms":      latency_ms,
-        "_excel_file":     excel_file,
-        "original_tx_id":  original_tx_id,
-        "duplicate_tx_id": duplicate_tx_id,
+        "answer":               answer,
+        "db_result":            {"success": True, "rows": rows, "row_count": row_count},
+        "latency_ms":           latency_ms,
+        "_excel_file":          excel_file,
+        "original_tx_id":       original_tx_id,
+        "duplicate_tx_id":      duplicate_tx_id,
+        "dispute_found":        dispute_found,
+        "reversal_recommended": reversal_recommended,
+        "pan_enrolled":         pan_enrolled,
+        "credit_recommended":   credit_recommended,
+        "missing_points":       missing_points,
+        "pan_masked":           pan_masked,
     }
 
 # ── Routing decisions ─────────────────────────────────────────
@@ -639,5 +761,6 @@ async def run_agent(
         "missing_points":       final_state.get("missing_points", 0),
         "credit_recommended":   final_state.get("credit_recommended", False),
         "pan_enrolled":         final_state.get("pan_enrolled", False),
+        "pan_masked":           final_state.get("pan_masked"),
         "export_file":          final_state.get("_excel_file"),
     }
