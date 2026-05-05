@@ -3,9 +3,9 @@
 // the textarea state lives in MessageInput. App composes layout +
 // orchestrates the dispute/loyalty submit flows.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import RoleSelector  from "./components/RoleSelector";
-import Message       from "./components/Message";
+import MessageList   from "./components/MessageList";
 import ReceiptUpload from "./components/ReceiptUpload";
 import OpsConsole    from "./components/OpsConsole";
 import MessageInput  from "./components/MessageInput";
@@ -110,7 +110,9 @@ export default function App() {
   }
 
   // ── Submit-for-review handlers ───────────────────────────────
-  async function handleSubmitDispute(originalTxId, duplicateTxId, msg) {
+  // useCallback so MessageList's React.memo actually skips re-renders
+  // when these handler references would otherwise change every render.
+  const handleSubmitDispute = useCallback(async (originalTxId, duplicateTxId, msg) => {
     try {
       await submitDispute({
         customer_session_id: sessionId,
@@ -131,9 +133,9 @@ export default function App() {
         content: "Could not submit for review: " + (err?.message || "unknown error"),
       });
     }
-  }
+  }, [sessionId, addMessage]);
 
-  async function handleSubmitLoyalty(panMasked, points, msg) {
+  const handleSubmitLoyalty = useCallback(async (panMasked, points, msg) => {
     try {
       await submitLoyalty({
         customer_session_id: sessionId,
@@ -151,7 +153,7 @@ export default function App() {
         content: "Could not submit for review: " + (err?.message || "unknown error"),
       });
     }
-  }
+  }, [sessionId, addMessage]);
 
   const meta = ROLE_META[role] || ROLE_META.CARDHOLDER;
 
@@ -248,22 +250,12 @@ function ChatView({
           </div>
         )}
 
-        {messages.map(msg => (
-          <Message
-            key={msg.id}
-            msg={msg}
-            onSubmitDispute={onSubmitDispute}
-            onSubmitLoyalty={onSubmitLoyalty}
-          />
-        ))}
-
-        {isTyping && (
-          <div style={styles.typing}>
-            <span style={styles.dot2} />
-            <span style={styles.dot2} />
-            <span style={styles.dot2} />
-          </div>
-        )}
+        <MessageList
+          messages={messages}
+          isTyping={isTyping}
+          onSubmitDispute={onSubmitDispute}
+          onSubmitLoyalty={onSubmitLoyalty}
+        />
         <div ref={bottomRef} />
       </div>
 
@@ -347,15 +339,6 @@ const styles = {
     padding: "7px 14px", borderRadius: 20, border: "1px solid #E2E8F0",
     background: "#fff", cursor: "pointer", fontSize: 12, color: "#475569",
     textAlign: "left",
-  },
-  typing: {
-    display: "flex", gap: 4, padding: "10px 14px",
-    background: "#F1F5F9", borderRadius: "18px 18px 18px 4px",
-    width: "fit-content", marginBottom: 16,
-  },
-  dot2: {
-    width: 7, height: 7, borderRadius: "50%", background: "#94A3B8",
-    display: "inline-block", animation: "pulse 1.2s ease-in-out infinite",
   },
   inputArea: {
     background: "#fff", borderTop: "1px solid #E2E8F0",
