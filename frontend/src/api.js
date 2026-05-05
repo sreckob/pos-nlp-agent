@@ -1,6 +1,18 @@
-// api.js — WebSocket client for POS NLP Agent
+// api.js — WebSocket + REST client for POS NLP Agent
 
 const WS_BASE = process.env.REACT_APP_WS_URL || "ws://localhost:8000";
+
+// REST base — in dev (no env var), use "" so relative paths go through
+// CRA's package.json proxy. In prod, derive from WS_BASE so we don't
+// need a separate env var on Vercel.
+const API_BASE = process.env.REACT_APP_API_URL
+  || (process.env.REACT_APP_WS_URL
+        ? process.env.REACT_APP_WS_URL
+            .replace(/^wss:\/\//, "https://")
+            .replace(/^ws:\/\//,  "http://")
+        : "");
+
+function url(path) { return API_BASE + path; }
 
 export function createWebSocket(sessionId, onMessage, onError, onClose) {
   const ws = new WebSocket(`${WS_BASE}/ws/${sessionId}`);
@@ -24,7 +36,7 @@ export function sendMessage(ws, message, imageData = null) {
 
 export async function getNewSessionId() {
   try {
-    const res  = await fetch("/session/new");
+    const res  = await fetch(url("/session/new"));
     const data = await res.json();
     return data.session_id;
   } catch {
@@ -34,7 +46,7 @@ export async function getNewSessionId() {
 
 // fetch helper that throws on HTTP errors (so callers can .catch them).
 async function postJson(path, payload) {
-  const res = await fetch(path, {
+  const res = await fetch(url(path), {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify(payload),
@@ -61,17 +73,17 @@ export async function submitLoyalty(payload) {
 
 // ── Ops-side: queue + decide ──────────────────────────────────
 export async function fetchOpsQueue() {
-  const res = await fetch("/ops/queue");
+  const res = await fetch(url("/ops/queue"));
   return res.json();
 }
 
 export async function fetchPendingDetail(approvalId) {
-  const res = await fetch(`/ops/pending/${approvalId}`);
+  const res = await fetch(url(`/ops/pending/${approvalId}`));
   return res.json();
 }
 
 export async function decideApproval(approvalId, decision, overrideSummary = null) {
-  const res = await fetch("/ops/decide", {
+  const res = await fetch(url("/ops/decide"), {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify({
