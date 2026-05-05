@@ -281,11 +281,6 @@ async def dispute_submit(req: DisputeSubmitRequest):
 @app.post("/loyalty/submit")
 async def loyalty_submit(req: LoyaltySubmitRequest):
     """Customer submits loyalty credit request for ops review."""
-    logger.info(
-        f"/loyalty/submit received: pan='{req.pan_masked}' "
-        f"points={req.points_to_add} "
-        f"session={req.customer_session_id[:8] if req.customer_session_id else None}"
-    )
     if not req.customer_session_id:
         raise HTTPException(status_code=400, detail="customer_session_id required")
     if not req.pan_masked:

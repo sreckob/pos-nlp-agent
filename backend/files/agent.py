@@ -537,10 +537,6 @@ def format_node(state: AgentState) -> AgentState:
             credit_recommended = False
             missing_points     = 0
         else:
-            logger.info(
-                f"LOYALTY format: row[0] keys={list(rows[0].keys())} "
-                f"claude.pan_masked={pan_masked}"
-            )
             # Sum uncredited points from DB rows. If the SELECT pulled
             # loyalty_points_earned + loyalty_points_credited, we know the
             # gap exactly — trust the DB over Claude's flags.
@@ -584,7 +580,6 @@ def format_node(state: AgentState) -> AgentState:
                             pan_masked = r["rows"][0].get("pan_masked")
                 else:
                     pan_masked = tail
-        logger.info(f"LOYALTY format: final pan_masked={pan_masked}")
 
     excel_file = None
     if state.get("export_requested") and rows:
