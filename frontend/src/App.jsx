@@ -14,49 +14,50 @@ import { useChatSocket } from "./hooks/useChatSocket";
 
 // ── Role metadata ─────────────────────────────────────────────
 const ROLE_META = {
-  CARDHOLDER: {
-    label: "Cardholder", color: "#2563EB", bg: "#EFF6FF", icon: "💳",
-    examples: [
-      "Show my transactions for card ending in 4242",
-      "Why was my card declined yesterday?",
-      "Pokaži mi sve transakcije od prošle sedmice",
-      "How many contactless payments did I make this month?",
-    ],
-  },
-  MERCHANT: {
-    label: "Merchant", color: "#0D9488", bg: "#F0FDFA", icon: "🏪",
-    examples: [
-      "Show all transactions on my terminals last week",
-      "Which card brand is most used at my POS?",
-      "Export declined transactions this month to Excel",
-      "What was my total revenue yesterday?",
-    ],
-  },
-  DISPUTE: {
-    label: "Dispute", color: "#DC2626", bg: "#FEF2F2", icon: "⚠️",
-    examples: [
-      "I was charged twice at Maxi yesterday",
-      "Duplo su mi naplatili u NIS Petrolu",
-      "My card ending in 5555 was double-charged at NIS Petrol",
-      "I have a receipt for a charge I didn't make",
-    ],
-  },
-  LOYALTY: {
-    label: "Loyalty", color: "#D97706", bg: "#FFFBEB", icon: "⭐",
-    examples: [
-      "My points were not added for my Lidl purchase",
-      "Moji poeni nisu dodati za kupovinu u Maxi-ju",
-      "Check loyalty points for card ending in 4242",
-      "How many points do I have?",
-    ],
-  },
+  CARDHOLDER: { label: "Cardholder", color: "#2563EB", bg: "#EFF6FF", icon: "💳" },
+  MERCHANT:   { label: "Merchant",   color: "#0D9488", bg: "#F0FDFA", icon: "🏪" },
+  DISPUTE:    { label: "Dispute",    color: "#DC2626", bg: "#FEF2F2", icon: "⚠️" },
+  LOYALTY:    { label: "Loyalty",    color: "#D97706", bg: "#FFFBEB", icon: "⭐" },
 };
 
-const ROLE_GREETINGS = {
-  CARDHOLDER: "I am a cardholder and want to check my transactions",
-  MERCHANT:   "I am a merchant and want to view my terminal transactions",
-  DISPUTE:    "I am a cardholder and I have a dispute about a double charge",
-  LOYALTY:    "I am a loyalty member and want to check my points",
+// Bilingual welcome messages injected directly into chat on role select.
+// No LLM call — language-neutral, clearly states required fields per path.
+const WELCOME_MESSAGES = {
+  CARDHOLDER:
+    "Welcome to the Cardholder channel.\n" +
+    "To look up your transactions, please provide your card's last 4 digits.\n\n" +
+    "Dobrodošli na kanal za kartičare.\n" +
+    "Za pretragu transakcija navedite poslednje 4 cifre vaše kartice.",
+
+  MERCHANT:
+    "Welcome to the Merchant channel.\n" +
+    "Please identify yourself with your merchant name or terminal ID.\n\n" +
+    "Dobrodošli na kanal za trgovce.\n" +
+    "Navedite naziv vašeg poslovnog mesta ili ID terminala.",
+
+  DISPUTE:
+    "Welcome to the Dispute channel.\n" +
+    "To investigate a potential double charge, I will need:\n" +
+    "  • Card last 4 digits\n" +
+    "  • Merchant name\n" +
+    "  • Amount charged\n" +
+    "  • Approximate date\n" +
+    "You can also attach a receipt image.\n\n" +
+    "Dobrodošli na kanal za sporove.\n" +
+    "Za istragu duplog zaduženja potrebno mi je:\n" +
+    "  • Poslednje 4 cifre kartice\n" +
+    "  • Naziv prodavca\n" +
+    "  • Iznos zaduženja\n" +
+    "  • Približan datum\n" +
+    "Možete priložiti i sliku računa.",
+
+  LOYALTY:
+    "Welcome to the Loyalty channel.\n" +
+    "Please provide your full masked card number (e.g. 411111******4242) " +
+    "or your card's last 4 digits to check your points.\n\n" +
+    "Dobrodošli na kanal za lojalnost.\n" +
+    "Navedite pun maskirani broj kartice (npr. 411111******4242) " +
+    "ili poslednje 4 cifre kartice da biste proverili poene.",
 };
 
 const PLACEHOLDERS = {
@@ -103,10 +104,16 @@ export default function App() {
     setReceipt(null);
   }
 
-  // ── Role selection (sends a silent priming message) ──────────
+  // ── Role selection ───────────────────────────────────────────
+  // Inject a static welcome immediately (no LLM call, no language ambiguity).
+  // The router detects the channel from the user's first real message.
   function handleRoleSelect(selectedRole) {
     setRole(selectedRole);
-    setTimeout(() => sendChat(ROLE_GREETINGS[selectedRole]), 400);
+    addMessage({
+      role:      "assistant",
+      agentRole: selectedRole,
+      content:   WELCOME_MESSAGES[selectedRole],
+    });
   }
 
   // ── Submit-for-review handlers ───────────────────────────────
@@ -232,24 +239,6 @@ function ChatView({
       </div>
 
       <div style={styles.messages}>
-        {messages.length === 0 && (
-          <div style={styles.empty}>
-            <div style={{ ...styles.emptyIcon, background: meta.bg }}>{meta.icon}</div>
-            <p style={styles.emptyTitle}>Ask about {meta.label.toLowerCase()} transactions</p>
-            <div style={styles.examples}>
-              {meta.examples.map((ex, i) => (
-                <button
-                  key={i}
-                  style={styles.chip}
-                  onClick={() => inputRef.current?.setText(ex)}
-                >
-                  {ex}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <MessageList
           messages={messages}
           isTyping={isTyping}
@@ -324,21 +313,6 @@ const styles = {
   messages: {
     flex: 1, overflowY: "auto", padding: "20px 24px",
     display: "flex", flexDirection: "column",
-  },
-  empty: {
-    margin: "auto", textAlign: "center", paddingBottom: 40, maxWidth: 520,
-  },
-  emptyIcon: {
-    width: 56, height: 56, borderRadius: 16, fontSize: 26,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    margin: "0 auto 16px",
-  },
-  emptyTitle: { fontSize: 16, fontWeight: 600, color: "#334155", margin: "0 0 16px" },
-  examples:   { display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" },
-  chip: {
-    padding: "7px 14px", borderRadius: 20, border: "1px solid #E2E8F0",
-    background: "#fff", cursor: "pointer", fontSize: 12, color: "#475569",
-    textAlign: "left",
   },
   inputArea: {
     background: "#fff", borderTop: "1px solid #E2E8F0",
