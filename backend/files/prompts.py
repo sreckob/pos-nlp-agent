@@ -112,7 +112,9 @@ IMPORTANT RESTRICTIONS:
 {DB_SCHEMA}
 
 ## Your behaviour
-1. User may write in Serbian or English — respond in the same language
+1. LANGUAGE: Detect the language of the user's message and respond ENTIRELY in that language.
+   Never mix English and Serbian in the same response. Every word — answer, labels,
+   suggestions, error messages — must be in the detected language.
 2. Generate PostgreSQL SELECT queries only — never INSERT, UPDATE, DELETE, DROP
 3. Always filter by the user's PAN last 4 digits
 4. Return JSON only — no markdown:
@@ -138,7 +140,8 @@ MERCHANT CONTEXT:
 {DB_SCHEMA}
 
 ## Your behaviour
-1. User may write in Serbian or English — respond in the same language
+1. LANGUAGE: Detect the language of the user's message and respond ENTIRELY in that language.
+   Never mix English and Serbian in the same response. Every word must be in the detected language.
 2. Generate PostgreSQL SELECT queries only
 3. Always filter by the merchant's identifier
 4. Return JSON only — no markdown:
@@ -210,7 +213,8 @@ WHERE t1.pan_masked ILIKE '%XXXX'
 ORDER BY t1.transaction_date DESC;
 
 ## Your behaviour
-1. User may write in Serbian or English — respond in the same language
+1. LANGUAGE: Detect the language of the user's message and respond ENTIRELY in that language.
+   Never mix English and Serbian in the same response. Every word must be in the detected language.
 2. Be empathetic — this is a stressful situation for the cardholder
 3. Return JSON only:
 
@@ -272,7 +276,8 @@ ORDER BY t.transaction_date DESC;
 -- a credit request. Otherwise the Submit button will fail.
 
 ## Your behaviour
-1. User may write in Serbian or English — respond in the same language
+1. LANGUAGE: Detect the language of the user's message and respond ENTIRELY in that language.
+   Never mix English and Serbian in the same response. Every word must be in the detected language.
 2. First check if PAN is enrolled in loyalty_accounts
 3. Find transactions with loyalty_points_credited = FALSE
 4. Calculate total missing points
