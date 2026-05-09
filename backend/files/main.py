@@ -58,16 +58,13 @@ def _tx_exists(tx_id: str) -> bool:
     )
     return bool(r.get("rows"))
 
+
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="POS NLP Query Agent",
-    version="2.0.0"
-)
+app = FastAPI(title="POS NLP Query Agent", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -96,16 +93,18 @@ async def push_to_customer(session_id: str, payload: dict) -> bool:
         logger.warning(f"WS push failed for {session_id[:8]}: {e}")
         return False
 
+
 # ── Health check ──────────────────────────────────────────────
 @app.get("/")
 @app.get("/health")
 async def health():
     return {
-        "status":    "ok",
+        "status": "ok",
         "timestamp": datetime.utcnow().isoformat(),
-        "service":   "pos-nlp-agent",
-        "version":   "2.0.0"
+        "service": "pos-nlp-agent",
+        "version": "2.0.0",
     }
+
 
 # ── Session helpers ───────────────────────────────────────────
 @app.get("/session/new")
@@ -114,16 +113,18 @@ async def new_session():
     session_store.get_or_create(session_id)
     return {"session_id": session_id}
 
+
 @app.get("/session/{session_id}/history")
 async def get_history(session_id: str):
     session = session_store.get_or_create(session_id)
     return {
-        "session_id":  session_id,
-        "role":        session.get("role"),
-        "language":    session.get("language"),
-        "turn_count":  session.get("turn_count", 0),
-        "history":     session.get("history", [])
+        "session_id": session_id,
+        "role": session.get("role"),
+        "language": session.get("language"),
+        "turn_count": session.get("turn_count", 0),
+        "history": session.get("history", []),
     }
+
 
 # ── WebSocket chat endpoint ───────────────────────────────────
 @app.websocket("/ws/{session_id}")
@@ -138,15 +139,15 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             raw = await websocket.receive_text()
 
             try:
-                data         = json.loads(raw)
+                data = json.loads(raw)
                 user_message = data.get("message", "").strip()
-                image_data   = data.get("image")  # {base64, type} or None
+                image_data = data.get("image")  # {base64, type} or None
                 # Optional: client can force a role reset
                 if data.get("reset_role"):
                     session_store.set_role(session_id, None)
             except json.JSONDecodeError:
                 user_message = raw.strip()
-                image_data   = None
+                image_data = None
 
             if not user_message:
                 continue
@@ -157,45 +158,46 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             )
 
             # Typing indicator
-            await websocket.send_json({
-                "type":       "typing",
-                "session_id": session_id
-            })
+            await websocket.send_json({"type": "typing", "session_id": session_id})
 
             try:
                 result = await run_agent(
-                    session_id    = session_id,
-                    user_message  = user_message,
-                    session_store = session_store,
-                    image_data    = image_data,
+                    session_id=session_id,
+                    user_message=user_message,
+                    session_store=session_store,
+                    image_data=image_data,
                 )
 
-                await websocket.send_json({
-                    "type":                 "response",
-                    "session_id":           session_id,
-                    "message":              result["answer"],
-                    "sql":                  result.get("sql"),
-                    "rows":                 result.get("rows", []),
-                    "row_count":            result.get("row_count", 0),
-                    "role":                 result.get("role"),
-                    "language":             result.get("language"),
-                    "timestamp":            datetime.utcnow().isoformat(),
-                    "suggest_switch":       result.get("suggest_switch", False),
-                    "switch_message":       result.get("switch_message"),
-                    "pending_role":         result.get("pending_role"),
-                    "force_reset":          result.get("force_reset", False),
-                    "mismatch_count":       result.get("mismatch_count", 0),
-                    "dispute_found":        result.get("dispute_found", False),
-                    "reversal_recommended": result.get("reversal_recommended", False),
-                    "original_tx_id":       result.get("original_tx_id"),
-                    "duplicate_tx_id":      result.get("duplicate_tx_id"),
-                    "confidence":           result.get("confidence", 0.0),
-                    "missing_points":       result.get("missing_points", 0),
-                    "credit_recommended":   result.get("credit_recommended", False),
-                    "pan_enrolled":         result.get("pan_enrolled", False),
-                    "pan_masked":           result.get("pan_masked"),
-                    "has_export":           result.get("export_file") is not None,
-                })
+                await websocket.send_json(
+                    {
+                        "type": "response",
+                        "session_id": session_id,
+                        "message": result["answer"],
+                        "sql": result.get("sql"),
+                        "rows": result.get("rows", []),
+                        "row_count": result.get("row_count", 0),
+                        "role": result.get("role"),
+                        "language": result.get("language"),
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "suggest_switch": result.get("suggest_switch", False),
+                        "switch_message": result.get("switch_message"),
+                        "pending_role": result.get("pending_role"),
+                        "force_reset": result.get("force_reset", False),
+                        "mismatch_count": result.get("mismatch_count", 0),
+                        "dispute_found": result.get("dispute_found", False),
+                        "reversal_recommended": result.get(
+                            "reversal_recommended", False
+                        ),
+                        "original_tx_id": result.get("original_tx_id"),
+                        "duplicate_tx_id": result.get("duplicate_tx_id"),
+                        "confidence": result.get("confidence", 0.0),
+                        "missing_points": result.get("missing_points", 0),
+                        "credit_recommended": result.get("credit_recommended", False),
+                        "pan_enrolled": result.get("pan_enrolled", False),
+                        "pan_masked": result.get("pan_masked"),
+                        "has_export": result.get("export_file") is not None,
+                    }
+                )
 
                 logger.info(
                     f"[{session_id}] role={result.get('role')} "
@@ -205,12 +207,14 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
             except Exception as e:
                 logger.error(f"[{session_id}] Agent error: {e}")
-                await websocket.send_json({
-                    "type":       "error",
-                    "session_id": session_id,
-                    "message":    "Sorry, something went wrong. Please try again.",
-                    "timestamp":  datetime.utcnow().isoformat()
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "session_id": session_id,
+                        "message": "Sorry, something went wrong. Please try again.",
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                )
 
     except WebSocketDisconnect:
         logger.info(f"Session disconnected: {session_id}")
@@ -222,23 +226,26 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 # ── Request models ────────────────────────────────────────────
 class DisputeSubmitRequest(BaseModel):
     customer_session_id: str
-    original_tx_id:      str
-    duplicate_tx_id:     str
-    pan_masked:          Optional[str] = None
-    amount:              Optional[float] = None
-    merchant_name:       Optional[str] = None
-    language:            str = "en"
+    original_tx_id: str
+    duplicate_tx_id: str
+    pan_masked: Optional[str] = None
+    amount: Optional[float] = None
+    merchant_name: Optional[str] = None
+    language: str = "en"
+
 
 class LoyaltySubmitRequest(BaseModel):
     customer_session_id: Optional[str] = None
-    pan_masked:          Optional[str] = None
-    points_to_add:       Optional[int] = None
-    language:            str = "en"
+    pan_masked: Optional[str] = None
+    points_to_add: Optional[int] = None
+    language: str = "en"
+
 
 class OpsDecideRequest(BaseModel):
-    approval_id:      str
-    decision:         str    # "APPROVE" | "REJECT"
+    approval_id: str
+    decision: str  # "APPROVE" | "REJECT"
     override_summary: Optional[str] = None
+
 
 # ── Customer-side submit endpoints ────────────────────────────
 @app.post("/dispute/submit")
@@ -250,22 +257,24 @@ async def dispute_submit(req: DisputeSubmitRequest):
     if not _tx_exists(req.original_tx_id) or not _tx_exists(req.duplicate_tx_id):
         raise HTTPException(status_code=400, detail="transaction(s) not found in DB")
     if req.original_tx_id == req.duplicate_tx_id:
-        raise HTTPException(status_code=400, detail="original and duplicate are the same row")
+        raise HTTPException(
+            status_code=400, detail="original and duplicate are the same row"
+        )
     if not req.customer_session_id:
         raise HTTPException(status_code=400, detail="customer_session_id required")
 
     payload = {
-        "original_tx_id":  req.original_tx_id,
+        "original_tx_id": req.original_tx_id,
         "duplicate_tx_id": req.duplicate_tx_id,
-        "pan_masked":      req.pan_masked,
-        "amount":          req.amount,
-        "merchant_name":   req.merchant_name,
+        "pan_masked": req.pan_masked,
+        "amount": req.amount,
+        "merchant_name": req.merchant_name,
     }
     approval_id = pending_store.enqueue(
-        type                = "DISPUTE",
-        payload             = payload,
-        customer_session_id = req.customer_session_id,
-        customer_language   = req.language,
+        type="DISPUTE",
+        payload=payload,
+        customer_session_id=req.customer_session_id,
+        customer_language=req.language,
     )
     logger.info(
         f"Dispute submitted: id={approval_id[:8]} "
@@ -274,9 +283,10 @@ async def dispute_submit(req: DisputeSubmitRequest):
     )
     return {
         "submission_id": approval_id,
-        "status":        "PENDING",
-        "message":       "Submitted for operations review.",
+        "status": "PENDING",
+        "message": "Submitted for operations review.",
     }
+
 
 @app.post("/loyalty/submit")
 async def loyalty_submit(req: LoyaltySubmitRequest):
@@ -284,19 +294,22 @@ async def loyalty_submit(req: LoyaltySubmitRequest):
     if not req.customer_session_id:
         raise HTTPException(status_code=400, detail="customer_session_id required")
     if not req.pan_masked:
-        raise HTTPException(status_code=400, detail="pan_masked missing — agent did not propagate it; ask the customer to repeat the card number")
+        raise HTTPException(
+            status_code=400,
+            detail="pan_masked missing — agent did not propagate it; ask the customer to repeat the card number",
+        )
     if not req.points_to_add or req.points_to_add <= 0:
         raise HTTPException(status_code=400, detail="points_to_add must be > 0")
 
     payload = {
-        "pan_masked":    req.pan_masked,
+        "pan_masked": req.pan_masked,
         "points_to_add": req.points_to_add,
     }
     approval_id = pending_store.enqueue(
-        type                = "LOYALTY",
-        payload             = payload,
-        customer_session_id = req.customer_session_id,
-        customer_language   = req.language,
+        type="LOYALTY",
+        payload=payload,
+        customer_session_id=req.customer_session_id,
+        customer_language=req.language,
     )
     logger.info(
         f"Loyalty submitted: id={approval_id[:8]} "
@@ -304,20 +317,23 @@ async def loyalty_submit(req: LoyaltySubmitRequest):
     )
     return {
         "submission_id": approval_id,
-        "status":        "PENDING",
-        "message":       "Submitted for operations review.",
+        "status": "PENDING",
+        "message": "Submitted for operations review.",
     }
+
 
 @app.get("/loyalty/balance/{pan_masked}")
 async def loyalty_balance(pan_masked: str):
     """Get current loyalty account balance (read-only)."""
     return get_loyalty_balance(pan_masked)
 
+
 # ── Ops endpoints ─────────────────────────────────────────────
 @app.get("/ops/queue")
 async def ops_queue():
     """List pending approvals for the ops console."""
     return {"pending": pending_store.list_pending()}
+
 
 @app.get("/ops/pending/{approval_id}")
 async def ops_pending_detail(approval_id: str):
@@ -330,16 +346,20 @@ async def ops_pending_detail(approval_id: str):
         raise HTTPException(status_code=404, detail="approval not found")
 
     if not row.get("agent_recommendation"):
-        payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+        payload = (
+            row["payload"]
+            if isinstance(row["payload"], dict)
+            else json.loads(row["payload"])
+        )
         if row["type"] == "DISPUTE":
             recommendation = review_dispute(
-                original_tx_id  = payload["original_tx_id"],
-                duplicate_tx_id = payload["duplicate_tx_id"],
+                original_tx_id=payload["original_tx_id"],
+                duplicate_tx_id=payload["duplicate_tx_id"],
             )
         elif row["type"] == "LOYALTY":
             recommendation = review_loyalty_credit(
-                pan_masked    = payload["pan_masked"],
-                points_to_add = payload["points_to_add"],
+                pan_masked=payload["pan_masked"],
+                points_to_add=payload["points_to_add"],
             )
         else:
             raise HTTPException(status_code=400, detail=f"unknown type: {row['type']}")
@@ -349,12 +369,15 @@ async def ops_pending_detail(approval_id: str):
 
     return row
 
+
 @app.post("/ops/decide")
 async def ops_decide(req: OpsDecideRequest):
     """Ops decision: approve or reject. Approval triggers write_ops + customer push."""
     decision = req.decision.upper()
     if decision not in ("APPROVE", "REJECT"):
-        raise HTTPException(status_code=400, detail="decision must be APPROVE or REJECT")
+        raise HTTPException(
+            status_code=400, detail="decision must be APPROVE or REJECT"
+        )
 
     row = pending_store.get(req.approval_id)
     if not row:
@@ -362,31 +385,37 @@ async def ops_decide(req: OpsDecideRequest):
     if row["status"] != "PENDING":
         raise HTTPException(status_code=409, detail=f"already {row['status']}")
 
-    payload = row["payload"] if isinstance(row["payload"], dict) else json.loads(row["payload"])
+    payload = (
+        row["payload"]
+        if isinstance(row["payload"], dict)
+        else json.loads(row["payload"])
+    )
     rec = row.get("agent_recommendation") or {}
-    audit = req.override_summary or rec.get("audit_summary") or f"{decision} by ops_console"
+    audit = (
+        req.override_summary or rec.get("audit_summary") or f"{decision} by ops_console"
+    )
     write_result: dict = {"success": True}
 
     # On APPROVE — call the actual write_ops
     if decision == "APPROVE":
         if row["type"] == "DISPUTE":
             write_result = approve_dispute_reversal(
-                original_tx_id  = payload["original_tx_id"],
-                duplicate_tx_id = payload["duplicate_tx_id"],
+                original_tx_id=payload["original_tx_id"],
+                duplicate_tx_id=payload["duplicate_tx_id"],
             )
         elif row["type"] == "LOYALTY":
             write_result = credit_loyalty_points(
-                pan_masked    = payload["pan_masked"],
-                points_to_add = payload["points_to_add"],
+                pan_masked=payload["pan_masked"],
+                points_to_add=payload["points_to_add"],
             )
 
         if not write_result.get("success"):
             # Write failed — leave row PENDING so ops can retry / investigate
             return {
-                "decision":      "FAILED",
-                "approval_id":   req.approval_id,
-                "write_result":  write_result,
-                "message":       "Write operation failed — row left PENDING.",
+                "decision": "FAILED",
+                "approval_id": req.approval_id,
+                "write_result": write_result,
+                "message": "Write operation failed — row left PENDING.",
             }
 
     # On REJECT for a dispute, mark the transactions as REJECTED in the
@@ -394,35 +423,37 @@ async def ops_decide(req: OpsDecideRequest):
     # is a no-op on transactions (points just stay uncredited).
     elif decision == "REJECT" and row["type"] == "DISPUTE":
         write_result = reject_dispute(
-            duplicate_tx_id = payload["duplicate_tx_id"],
-            original_tx_id  = payload.get("original_tx_id"),
+            duplicate_tx_id=payload["duplicate_tx_id"],
+            original_tx_id=payload.get("original_tx_id"),
         )
 
     pending_store.mark_decided(
-        approval_id   = req.approval_id,
-        decision      = "APPROVED" if decision == "APPROVE" else "REJECTED",
-        audit_summary = audit,
+        approval_id=req.approval_id,
+        decision="APPROVED" if decision == "APPROVE" else "REJECTED",
+        audit_summary=audit,
     )
 
     # Push the result to the customer's chat (if WS still open)
     customer_session_id = row["customer_session_id"]
-    customer_language   = row.get("customer_language") or "en"
-    pushed = await push_to_customer(customer_session_id, {
-        "type":           "approval_decided",
-        "approval_id":    req.approval_id,
-        "approval_type":  row["type"],
-        "decision":       "APPROVED" if decision == "APPROVE" else "REJECTED",
-        "audit_summary":  audit,
-        "write_result":   write_result,
-        "language":       customer_language,
-        "timestamp":      datetime.utcnow().isoformat(),
-    })
+    customer_language = row.get("customer_language") or "en"
+    pushed = await push_to_customer(
+        customer_session_id,
+        {
+            "type": "approval_decided",
+            "approval_id": req.approval_id,
+            "approval_type": row["type"],
+            "decision": "APPROVED" if decision == "APPROVE" else "REJECTED",
+            "audit_summary": audit,
+            "write_result": write_result,
+            "language": customer_language,
+            "timestamp": datetime.utcnow().isoformat(),
+        },
+    )
 
     return {
-        "approval_id":    req.approval_id,
-        "decision":       "APPROVED" if decision == "APPROVE" else "REJECTED",
-        "audit_summary":  audit,
-        "write_result":   write_result,
+        "approval_id": req.approval_id,
+        "decision": "APPROVED" if decision == "APPROVE" else "REJECTED",
+        "audit_summary": audit,
+        "write_result": write_result,
         "customer_notified": pushed,
     }
-

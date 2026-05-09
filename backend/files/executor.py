@@ -21,11 +21,19 @@ logger = logging.getLogger(__name__)
 
 # ── Blocked SQL keywords ──────────────────────────────────────
 BLOCKED_KEYWORDS = [
-    r"\bINSERT\b", r"\bUPDATE\b", r"\bDELETE\b",
-    r"\bDROP\b",   r"\bTRUNCATE\b", r"\bALTER\b",
-    r"\bCREATE\b", r"\bGRANT\b",  r"\bREVOKE\b",
-    r"\bEXECUTE\b",r"\bCALL\b",
+    r"\bINSERT\b",
+    r"\bUPDATE\b",
+    r"\bDELETE\b",
+    r"\bDROP\b",
+    r"\bTRUNCATE\b",
+    r"\bALTER\b",
+    r"\bCREATE\b",
+    r"\bGRANT\b",
+    r"\bREVOKE\b",
+    r"\bEXECUTE\b",
+    r"\bCALL\b",
 ]
+
 
 def is_safe_sql(sql: str) -> bool:
     upper = sql.upper()
@@ -34,6 +42,7 @@ def is_safe_sql(sql: str) -> bool:
             logger.warning(f"Blocked unsafe SQL: {sql[:80]}")
             return False
     return True
+
 
 def serialize_row(row: dict) -> dict:
     """Convert non-JSON-serializable types."""
@@ -47,6 +56,7 @@ def serialize_row(row: dict) -> dict:
             clean[k] = v
     return clean
 
+
 def execute_query(sql: str) -> Dict[str, Any]:
     """
     Execute a safe SELECT query and return results.
@@ -54,10 +64,10 @@ def execute_query(sql: str) -> Dict[str, Any]:
     """
     if not is_safe_sql(sql):
         return {
-            "success":   False,
-            "rows":      [],
+            "success": False,
+            "rows": [],
             "row_count": 0,
-            "error":     "Query blocked: only SELECT statements are allowed."
+            "error": "Query blocked: only SELECT statements are allowed.",
         }
 
     sql = sql.strip().rstrip(";")
@@ -67,7 +77,7 @@ def execute_query(sql: str) -> Dict[str, Any]:
 
     try:
         conn = psycopg2.connect(settings.DATABASE_URL)
-        cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(sql)
         rows = [serialize_row(dict(row)) for row in cur.fetchall()]
         cur.close()
@@ -81,6 +91,7 @@ def execute_query(sql: str) -> Dict[str, Any]:
         logger.error(f"Unexpected error: {e}")
         return {"success": False, "rows": [], "row_count": 0, "error": str(e)}
 
+
 def execute_write(sql: str, params: tuple = None) -> Dict[str, Any]:
     """
     Execute a write query (UPDATE only — for loyalty credit and dispute resolution).
@@ -89,7 +100,10 @@ def execute_write(sql: str, params: tuple = None) -> Dict[str, Any]:
     # Extra safety — only allow UPDATE
     sql_upper = sql.strip().upper()
     if not sql_upper.startswith("UPDATE"):
-        return {"success": False, "error": "Only UPDATE statements allowed via execute_write"}
+        return {
+            "success": False,
+            "error": "Only UPDATE statements allowed via execute_write",
+        }
 
     # Block dangerous patterns even in UPDATE
     for pattern in [r"\bDROP\b", r"\bDELETE\b", r"\bTRUNCATE\b", r"\bALTER\b"]:
@@ -98,7 +112,7 @@ def execute_write(sql: str, params: tuple = None) -> Dict[str, Any]:
 
     try:
         conn = psycopg2.connect(settings.DATABASE_URL)
-        cur  = conn.cursor()
+        cur = conn.cursor()
         cur.execute(sql, params)
         affected = cur.rowcount
         conn.commit()
@@ -109,6 +123,7 @@ def execute_write(sql: str, params: tuple = None) -> Dict[str, Any]:
     except psycopg2.Error as e:
         logger.error(f"Write error: {e}")
         return {"success": False, "rows_affected": 0, "error": str(e)}
+
 
 def export_to_excel(rows: List[Dict]) -> bytes:
     """
@@ -133,9 +148,11 @@ def export_to_excel(rows: List[Dict]) -> bytes:
         # Header row
         headers = list(rows[0].keys())
         for col_idx, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col_idx, value=header.upper().replace("_", " "))
-            cell.font      = Font(bold=True, color="FFFFFF")
-            cell.fill      = PatternFill("solid", fgColor="1F5C9E")
+            cell = ws.cell(
+                row=1, column=col_idx, value=header.upper().replace("_", " ")
+            )
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="1F5C9E")
             cell.alignment = Alignment(horizontal="center")
 
         # Data rows
@@ -149,9 +166,7 @@ def export_to_excel(rows: List[Dict]) -> bytes:
 
         # Auto-size columns
         for col in ws.columns:
-            max_len = max(
-                len(str(cell.value or "")) for cell in col
-            )
+            max_len = max(len(str(cell.value or "")) for cell in col)
             ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
 
         buf = io.BytesIO()
