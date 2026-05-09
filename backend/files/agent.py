@@ -115,10 +115,12 @@ class AgentState(TypedDict):
 
 
 # ── Helpers ───────────────────────────────────────────────────
-def call_claude(system: str, messages: List[Dict], max_tokens: int = 1024) -> str:
+def call_claude(system: str, messages: List[Dict], max_tokens: int = 1024, node: str = "router") -> str:
+    temperature = settings.TEMPERATURES.get(node, 0.0)
     response = client.messages.create(
         model=settings.CLAUDE_MODEL,
         max_tokens=max_tokens,
+        temperature=temperature,
         system=system,
         messages=messages,
     )
@@ -225,6 +227,7 @@ def router_node(state: AgentState) -> AgentState:
             system=ROUTER_PROMPT,
             messages=[{"role": "user", "content": router_input}],
             max_tokens=512,
+            node="router",
         )
         parsed = parse_json_response(raw)
         detected_role = parsed.get("detected_role", current_role or "CARDHOLDER")
@@ -325,7 +328,7 @@ def router_node(state: AgentState) -> AgentState:
 def cardholder_node(state: AgentState) -> AgentState:
     try:
         messages = build_messages(state)
-        raw = call_claude(system=CARDHOLDER_PROMPT, messages=messages)
+        raw = call_claude(system=CARDHOLDER_PROMPT, messages=messages, node="cardholder")
         parsed, answer, err = safe_parse(raw)
         return {
             **state,
@@ -347,7 +350,7 @@ def cardholder_node(state: AgentState) -> AgentState:
 def merchant_node(state: AgentState) -> AgentState:
     try:
         messages = build_messages(state)
-        raw = call_claude(system=MERCHANT_PROMPT, messages=messages)
+        raw = call_claude(system=MERCHANT_PROMPT, messages=messages, node="merchant")
         parsed, answer, err = safe_parse(raw)
         return {
             **state,
@@ -401,9 +404,9 @@ def dispute_node(state: AgentState) -> AgentState:
             # Replace last message with vision content
             vision_messages = list(state["history"])
             vision_messages.append({"role": "user", "content": vision_content})
-            raw = call_claude(system=DISPUTE_PROMPT, messages=vision_messages)
+            raw = call_claude(system=DISPUTE_PROMPT, messages=vision_messages, node="dispute")
         else:
-            raw = call_claude(system=DISPUTE_PROMPT, messages=messages)
+            raw = call_claude(system=DISPUTE_PROMPT, messages=messages, node="dispute")
 
         parsed, answer, err = safe_parse(raw)
         return {
@@ -435,7 +438,7 @@ def dispute_node(state: AgentState) -> AgentState:
 def loyalty_node(state: AgentState) -> AgentState:
     try:
         messages = build_messages(state)
-        raw = call_claude(system=LOYALTY_PROMPT, messages=messages)
+        raw = call_claude(system=LOYALTY_PROMPT, messages=messages, node="loyalty")
         parsed, answer, err = safe_parse(raw)
         return {
             **state,

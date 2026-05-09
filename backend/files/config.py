@@ -19,6 +19,15 @@ class Settings:
     MAX_ROWS_RETURNED: int = int(os.getenv("MAX_ROWS_RETURNED", "100"))
     LOG_FILE: str = os.getenv("LOG_FILE", "agent_logs.jsonl")
 
+    # Temperature per node — override via env vars or experiment .env files
+    TEMPERATURES: dict = {
+        "router":     float(os.getenv("TEMP_ROUTER",     "0.0")),
+        "cardholder": float(os.getenv("TEMP_CARDHOLDER", "0.0")),
+        "merchant":   float(os.getenv("TEMP_MERCHANT",   "0.0")),
+        "dispute":    float(os.getenv("TEMP_DISPUTE",    "0.0")),
+        "loyalty":    float(os.getenv("TEMP_LOYALTY",    "0.0")),
+    }
+
 
 settings = Settings()
 

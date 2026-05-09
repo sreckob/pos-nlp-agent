@@ -94,9 +94,16 @@ Create `.env` in `backend/files/`:
 ```
 DATABASE_URL=postgresql://postgres.xxx:[PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
 ANTHROPIC_API_KEY=sk-ant-your-key-here
-CLAUDE_MODEL=claude-sonnet-4-5
+CLAUDE_MODEL=claude-sonnet-4-6
 MAX_ROWS_RETURNED=100
 LOG_FILE=agent_logs.jsonl
+
+# Node temperatures — 0.0 = deterministic (recommended for NL→SQL)
+TEMP_ROUTER=0.0
+TEMP_CARDHOLDER=0.0
+TEMP_MERCHANT=0.0
+TEMP_DISPUTE=0.0
+TEMP_LOYALTY=0.0
 ```
 
 ### 2. Install dependencies
@@ -153,6 +160,30 @@ The system enforces separation of duties between investigation and approval:
 2. **Customer Submit** calls `/dispute/submit` or `/loyalty/submit` — enqueues a `PENDING` row in `pending_approvals`. No DB write yet.
 3. **Approver agent** runs when ops opens the pending detail. Hard pre-checks + LLM audit decision.
 4. **Ops decision** (`POST /ops/decide`) is the only path that calls `write_ops`. On APPROVE, the result is pushed to the customer's chat via WebSocket.
+
+---
+
+## Temperature experiments
+
+Each node reads its temperature from an env var — change without touching code.
+
+| Variable | Node | Default |
+|---|---|---|
+| `TEMP_ROUTER` | Router (classification) | `0.0` |
+| `TEMP_CARDHOLDER` | Cardholder NL→SQL | `0.0` |
+| `TEMP_MERCHANT` | Merchant NL→SQL | `0.0` |
+| `TEMP_DISPUTE` | Dispute NL→SQL + OCR | `0.0` |
+| `TEMP_LOYALTY` | Loyalty NL→SQL | `0.0` |
+
+Experiment profiles live in `.env.exp_*` files (git-ignored). Run one:
+```bash
+env $(grep -v '^#' .env | xargs) TEMP_MERCHANT=0.3 uvicorn main:app --reload
+```
+
+Then compare validation output:
+```bash
+python validation/run_tests.py --category merchant --output results_exp_merchant.json
+```
 
 ---
 
