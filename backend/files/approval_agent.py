@@ -42,25 +42,30 @@ def _parse_json(raw: str) -> Dict:
 
 
 def _call_claude(system: str, payload: str) -> Dict:
-    raw = client.messages.create(
-        model=settings.CLAUDE_MODEL,
-        max_tokens=400,
-        system=system,
-        messages=[{"role": "user", "content": payload}],
-    ).content[0].text
+    raw = (
+        client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=400,
+            system=system,
+            messages=[{"role": "user", "content": payload}],
+        )
+        .content[0]
+        .text
+    )
     return _parse_json(raw)
 
 
 def _reject(reason: str) -> Dict[str, Any]:
     return {
-        "decision":        "REJECT",
-        "confidence":      1.0,
-        "audit_summary":   f"Auto-reject: {reason}",
+        "decision": "REJECT",
+        "confidence": 1.0,
+        "audit_summary": f"Auto-reject: {reason}",
         "blocking_reason": reason,
     }
 
 
 # ── Dispute review ────────────────────────────────────────────
+
 
 def _fetch_tx(tx_id: str) -> Dict:
     if not tx_id:
@@ -76,7 +81,7 @@ def _fetch_tx(tx_id: str) -> Dict:
 
 def review_dispute(original_tx_id: str, duplicate_tx_id: str) -> Dict[str, Any]:
     """Review a dispute reversal request. Returns decision dict."""
-    original  = _fetch_tx(original_tx_id)
+    original = _fetch_tx(original_tx_id)
     duplicate = _fetch_tx(duplicate_tx_id)
 
     if not original or not duplicate:
@@ -112,6 +117,7 @@ def review_dispute(original_tx_id: str, duplicate_tx_id: str) -> Dict[str, Any]:
 
 
 # ── Loyalty review ────────────────────────────────────────────
+
 
 def _fetch_uncredited(pan_masked: str) -> List[Dict]:
     safe = pan_masked.replace("'", "")

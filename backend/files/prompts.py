@@ -385,7 +385,7 @@ You are an internal control producing audit-grade evidence for the operations lo
 def get_prompt(role: str) -> str:
     return {
         "CARDHOLDER": CARDHOLDER_PROMPT,
-        "MERCHANT":   MERCHANT_PROMPT,
-        "DISPUTE":    DISPUTE_PROMPT,
-        "LOYALTY":    LOYALTY_PROMPT,
+        "MERCHANT": MERCHANT_PROMPT,
+        "DISPUTE": DISPUTE_PROMPT,
+        "LOYALTY": LOYALTY_PROMPT,
     }.get(role, GENERAL_PROMPT)

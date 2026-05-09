@@ -13,25 +13,26 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+
 def log_query(
-    session_id:   str,
+    session_id: str,
     user_message: str,
-    role:         str,
-    sql:          Optional[str],
-    row_count:    int,
-    latency_ms:   int,
-    error:        Optional[str] = None
+    role: str,
+    sql: Optional[str],
+    row_count: int,
+    latency_ms: int,
+    error: Optional[str] = None,
 ):
     entry = {
-        "timestamp":    datetime.utcnow().isoformat(),
-        "session_id":   session_id,
-        "role":         role,
+        "timestamp": datetime.utcnow().isoformat(),
+        "session_id": session_id,
+        "role": role,
         "user_message": user_message,
-        "sql":          sql,
-        "row_count":    row_count,
-        "latency_ms":   latency_ms,
-        "error":        error,
-        "success":      error is None
+        "sql": sql,
+        "row_count": row_count,
+        "latency_ms": latency_ms,
+        "error": error,
+        "success": error is None,
     }
     try:
         with open(settings.LOG_FILE, "a") as f:
