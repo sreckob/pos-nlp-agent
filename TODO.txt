@@ -1,0 +1,32 @@
+===============
+0. Srecko: RAG
+1. Review: Agent; Workflow; 
+2. Params: temp, p;
+3. Evaluation: (w/wo: last-lecture)
+4. Update tests
+5. Presentation
+===============
+Biggest practical gaps from this analysis:                                                                                                                                                                                                                                                                     
+  1. temperature not set — easiest single improvement for SQL reliability
+  2. No prompt caching — free latency win since the DB schema is static per prompt                                                                                                                                                                                                                               
+  3. No CoT for the router — adding "reasoning": "one sentence" to the router's JSON (already there actually) is good, but deeper reasoning for ambiguous messages could help accuracy
+  4. LLM output not schema-validated with Pydantic — the regex fallback handles it but structured output via tool_use would eliminate the parse failure class of bugs entirely  
+
+
+ Da li da se odvajaju agenti ili da i dalje budu kao nodovi 
+ jednog većeg?
+
+===============
+Agentic RAG for quality-grading node
+
+1.⁠ ⁠Dispute policy / chargeback regulation retrieval — highest value
+[5/9/26, 13:25:13] Srećko Srecko Batalov: The approver agent currently validates with hardcoded rules (same day, same amount, < 30 min, different approval code). In real payment systems, chargeback rules are complex and brand-specific: Visa Dispute Resolution has different rules than Mastercard's or local Dinacard. Those rules live in dense   
+  PDF documents (PSD2 directives, card scheme operating regulations). 
+  RAG over that corpus would let the approver pull the relevant clause when writing its audit summary — "applicable rule: Visa Dispute Resolution § 11.1.3, duplicate transaction within 30 minutes" — making the audit output genuinely     
+  regulatory-grade rather than just pattern-matched.                                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                                 
+  Implementation fit: Supabase already has pgvector available. 
+  You'd embed the regulatory documents, store in a dispute_policies vector table, 
+  and query at approval time: embed the dispute scenario → retrieve top-3 relevant clauses 
+  → pass as context to DISPUTE_APPROVAL_PROMPT.
+===============

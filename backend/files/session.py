@@ -17,15 +17,15 @@ class SessionStore:
     def get_or_create(self, session_id: str) -> Dict[str, Any]:
         if session_id not in self._sessions:
             self._sessions[session_id] = {
-                "history":        [],
-                "last_sql":       None,
-                "last_rows":      [],
-                "role":           None,
-                "pending_role":   None,   # suggested switch target
-                "mismatch_count": 0,      # consecutive mismatches on same channel
-                "language":       "en",
-                "created_at":     datetime.utcnow().isoformat(),
-                "turn_count":     0
+                "history": [],
+                "last_sql": None,
+                "last_rows": [],
+                "role": None,
+                "pending_role": None,  # suggested switch target
+                "mismatch_count": 0,  # consecutive mismatches on same channel
+                "language": "en",
+                "created_at": datetime.utcnow().isoformat(),
+                "turn_count": 0,
             }
         return self._sessions[session_id]
 
@@ -35,10 +35,10 @@ class SessionStore:
     def set_role(self, session_id: str, role: str, language: str = "en"):
         """Set role and reset mismatch counter."""
         session = self.get_or_create(session_id)
-        session["role"]           = role
-        session["language"]       = language
-        session["pending_role"]   = None
-        session["mismatch_count"] = 0   # reset on role change
+        session["role"] = role
+        session["language"] = language
+        session["pending_role"] = None
+        session["mismatch_count"] = 0  # reset on role change
 
     def increment_mismatch(self, session_id: str) -> int:
         """Increment mismatch counter and return new count."""
@@ -54,25 +54,25 @@ class SessionStore:
     def reset_to_menu(self, session_id: str):
         """Force reset — user returns to role selector."""
         session = self.get_or_create(session_id)
-        session["role"]           = None
-        session["pending_role"]   = None
+        session["role"] = None
+        session["pending_role"] = None
         session["mismatch_count"] = 0
-        session["last_sql"]       = None
-        session["last_rows"]      = []
+        session["last_sql"] = None
+        session["last_rows"] = []
         # Keep history so user sees what happened
 
     def update(
         self,
-        session_id:        str,
-        user_message:      str,
+        session_id: str,
+        user_message: str,
         assistant_message: str,
-        sql:               Optional[str] = None,
-        rows:              Optional[list] = None,
-        role:              Optional[str] = None,
-        language:          Optional[str] = None,
+        sql: Optional[str] = None,
+        rows: Optional[list] = None,
+        role: Optional[str] = None,
+        language: Optional[str] = None,
     ):
         session = self.get_or_create(session_id)
-        session["history"].append({"role": "user",      "content": user_message})
+        session["history"].append({"role": "user", "content": user_message})
         session["history"].append({"role": "assistant", "content": assistant_message})
         if sql:
             session["last_sql"] = sql

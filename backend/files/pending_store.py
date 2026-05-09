@@ -24,10 +24,10 @@ def _conn():
 
 
 def enqueue(
-    type:                str,
-    payload:             Dict[str, Any],
+    type: str,
+    payload: Dict[str, Any],
     customer_session_id: str,
-    customer_language:   str = "en",
+    customer_language: str = "en",
 ) -> str:
     """Insert a PENDING row. Returns the new id."""
     new_id = str(uuid.uuid4())
@@ -40,13 +40,17 @@ def enqueue(
             """,
             (new_id, type, json.dumps(payload), customer_session_id, customer_language),
         )
-    logger.info(f"Enqueued {type} approval: {new_id[:8]} session={customer_session_id[:8]}")
+    logger.info(
+        f"Enqueued {type} approval: {new_id[:8]} session={customer_session_id[:8]}"
+    )
     return new_id
 
 
 def list_pending(limit: int = 50) -> List[Dict[str, Any]]:
     """List PENDING rows newest first (for ops queue UI)."""
-    with _conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with _conn() as conn, conn.cursor(
+        cursor_factory=psycopg2.extras.RealDictCursor
+    ) as cur:
         cur.execute(
             """
             SELECT id, type, payload, status, customer_session_id, customer_language,
@@ -62,7 +66,9 @@ def list_pending(limit: int = 50) -> List[Dict[str, Any]]:
 
 
 def get(approval_id: str) -> Optional[Dict[str, Any]]:
-    with _conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with _conn() as conn, conn.cursor(
+        cursor_factory=psycopg2.extras.RealDictCursor
+    ) as cur:
         cur.execute(
             "SELECT * FROM pending_approvals WHERE id = %s",
             (approval_id,),
@@ -81,10 +87,10 @@ def cache_recommendation(approval_id: str, recommendation: Dict[str, Any]) -> No
 
 
 def mark_decided(
-    approval_id:    str,
-    decision:       str,        # "APPROVED" | "REJECTED"
-    audit_summary:  str,
-    decided_by:     str = "ops_console",
+    approval_id: str,
+    decision: str,  # "APPROVED" | "REJECTED"
+    audit_summary: str,
+    decided_by: str = "ops_console",
 ) -> None:
     with _conn() as conn, conn.cursor() as cur:
         cur.execute(
