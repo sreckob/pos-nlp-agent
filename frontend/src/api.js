@@ -14,12 +14,12 @@ const API_BASE = process.env.REACT_APP_API_URL
 
 function url(path) { return API_BASE + path; }
 
-export function createWebSocket(sessionId, onMessage, onError, onClose) {
+export function createWebSocket(sessionId, onMessage, onOpen, onError, onClose) {
   const ws = new WebSocket(`${WS_BASE}/ws/${sessionId}`);
-  ws.onopen    = () => console.log("WebSocket connected:", sessionId);
+  ws.onopen    = () => { if (onOpen)  onOpen();    };
   ws.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch {} };
   ws.onerror   = (e) => { if (onError) onError(e); };
-  ws.onclose   = ()  => { if (onClose) onClose(); };
+  ws.onclose   = ()  => { if (onClose) onClose();  };
   return ws;
 }
 

@@ -98,12 +98,22 @@ export function useChatSocket() {
 
   // ── (Re)connect with backoff ─────────────────────────────────
   const connect = useCallback((sid) => {
-    if (wsRef.current) wsRef.current.close();
     if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+
+    // Null out the old socket's onclose BEFORE closing it so we don't
+    // trigger an extra reconnect cycle from the socket being replaced.
+    if (wsRef.current) {
+      wsRef.current.onclose = null;
+      wsRef.current.close();
+    }
+
+    const onOpen = () => {
+      setConnected(true);
+      reconnectAttempt.current = 0;
+    };
 
     const onClose = () => {
       setConnected(false);
-      // Reconnect to the same session_id (server keeps state in memory).
       const delay = Math.min(
         1000 * (2 ** reconnectAttempt.current),
         RECONNECT_MAX_DELAY_MS
@@ -116,13 +126,10 @@ export function useChatSocket() {
     wsRef.current = createWebSocket(
       sid,
       handleMessage,
-      () => setConnected(false),  // onError — onClose follows automatically
+      onOpen,
+      () => {},      // onError — onClose always follows, handled there
       onClose,
     );
-    setTimeout(() => {
-      setConnected(true);
-      reconnectAttempt.current = 0;
-    }, 300);
   }, [handleMessage]);
 
   // ── Initial connection ───────────────────────────────────────
