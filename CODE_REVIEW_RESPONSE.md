@@ -96,3 +96,101 @@ Inline styles are working, the UI is desktop-only, and there are no hover/respon
 2. **Global store (Zustand)** — if a second feature needs cross-component state access without parent-child chain.
 3. **Tailwind CSS** — if additional UI screens are added post-demo.
 4. **Redis-backed session store** — if deploying multiple backend instances behind a load balancer.
+
+---
+
+# Mentor Review Response — May 10, 2026
+**Original Review:** Pavel Katurov, May 10, 2026 (`28 - Mentor review (2026-05-10).md`)
+
+---
+
+## Items addressed (Tier 1 — completed May 11, 2026)
+
+### 🔴 Critical — Race Condition in Loyalty Points Accrual
+**Status: ✓ Fixed.**
+
+`write_ops.py` `credit_loyalty_points()` changed from:
+```sql
+SET points = %s   -- read-modify-write anti-pattern
+```
+to:
+```sql
+SET points = points + %s   -- atomic DB-side increment
+```
+Two simultaneous approvals can no longer overwrite each other's result.
+
+### 🔒 Security — Secret Leakage (`env(2)` file)
+**Status: ✓ Fixed.**
+
+- Anthropic API key revoked and rotated (new key in Railway env vars)
+- Supabase database password reset (new connection string in Railway env vars)
+- `backend/files/env(2)` and `db/supabase/.env.save` purged from all git history via `git filter-repo`
+- Local `.env` files updated with new credentials
+- `.gitignore` extended with `env` and `env(*)` patterns to catch future dotless copies
+
+### 🔒 Security — `Math.random()` for Session IDs
+**Status: ✓ Fixed.**
+
+`frontend/src/api.js` fallback session ID generation changed from `Math.random()` to `crypto.randomUUID()` — cryptographically secure, built into all modern browsers.
+
+### 🔒 Security — Hardcoded Password Default in `config.py`
+**Status: ✓ Fixed.**
+
+Removed the `"postgresql://postgres:password@localhost:5432/pos_db"` default from `os.getenv("DATABASE_URL", ...)`. The existing `if not settings.DATABASE_URL: raise ValueError(...)` guard now actually fires when the env var is missing (previously the hardcoded default made it always truthy).
+
+---
+
+## Items pending (Tier 2 — to be done next)
+
+### 🔴 Critical — Database Connection Exhaustion (no pooling)
+**Status: Pending.**
+
+`executor.py`, `write_ops.py`, and `pending_store.py` open a new `psycopg2.connect()` for every query. Fix: `psycopg2.pool.SimpleConnectionPool` initialised at FastAPI startup, pool managed via a `get_conn()` context manager in a new `db.py`. Estimated ~2-3 hours.
+
+### 🔴 Critical — SQL Injection via f-strings
+**Status: Pending.**
+
+`main.py _tx_exists()` and several functions in `approval_agent.py` build queries with f-strings. Fix: add `params=None` to `execute_query()` and pass values via `cur.execute(sql, params)` — psycopg2 handles escaping. Affects ~5 call sites. Estimated ~1-2 hours.
+
+### 🔒 Security — No Authentication on `/ops/` Endpoints
+**Status: Pending.**
+
+`/ops/queue`, `/ops/pending/{id}`, `/ops/decide` are publicly accessible. Fix: FastAPI dependency with a hardcoded `OPS_API_KEY` env var check via `X-Ops-Key` header. ~30 min.
+
+### 🟡 Architecture — In-Memory `WS_CONNECTIONS` Dict
+**Status: Acknowledged, no action for MVP.**
+
+Acceptable for a single Railway dyno. Multi-worker scaling would require Redis Pub/Sub.
+
+### 🟡 Architecture — `agent.py` ~800 lines
+**Status: Deferred.**
+
+Refactor into `nodes/` directory. Pure code organisation, no behaviour change. Post-demo.
+
+### 🟢 Frontend — Silent Error Handling in `OpsQueue.jsx`
+**Status: Pending.**
+
+Empty catch block shows blank UI when polling fails. Fix: add an `error` state and display a "Server connection lost" banner. ~15 min.
+
+### 🟢 Frontend — Inline Styles
+**Status: Deferred.**
+
+Acceptable for MVP. CSS Modules or Tailwind post-demo.
+
+---
+
+## Net scorecard (Mentor review May 10)
+
+| Item | Status |
+|---|---|
+| Race condition in loyalty credit | ✓ Fixed |
+| `env(2)` credentials leaked in git | ✓ Fixed (rotated + purged) |
+| `Math.random()` session IDs | ✓ Fixed |
+| Hardcoded DB password default | ✓ Fixed |
+| DB connection pooling | ⏳ Tier 2 |
+| SQL injection via f-strings | ⏳ Tier 2 |
+| `/ops/` endpoint auth | ⏳ Tier 2 |
+| In-memory WS dict | Acknowledged / MVP acceptable |
+| `agent.py` file size | Deferred post-demo |
+| `OpsQueue` silent error | ⏳ Tier 2 |
+| Inline styles | Deferred post-demo |
