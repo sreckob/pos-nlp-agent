@@ -4,243 +4,367 @@
     "category": "exact_match",
     "language": "english",
     "prompt": "Find the transaction with approval code A1B2C3",
-    "expected_sql_contains": ["approval_code", "A1B2C3"],
+    "expected_sql_contains": [
+      "approval_code",
+      "A1B2C3"
+    ],
     "expected_result": "zero_or_more",
-    "notes": "Exact approval code lookup"
+    "notes": "Exact approval code lookup",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "EX-02",
     "category": "exact_match",
     "language": "english",
     "prompt": "Show me all transactions from terminal T0101",
-    "expected_sql_contains": ["terminal_id", "T0101"],
+    "expected_sql_contains": [
+      "terminal_id",
+      "T0101"
+    ],
     "expected_result": "zero_or_more",
-    "notes": "Exact terminal ID lookup"
+    "notes": "Exact terminal ID lookup",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "EX-03",
     "category": "exact_match",
     "language": "english",
     "prompt": "Find transactions with PAN ending in 1234",
-    "expected_sql_contains": ["pan_masked", "1234"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "1234"
+    ],
     "expected_result": "zero_or_more",
-    "notes": "PAN suffix lookup using ILIKE or LIKE"
+    "notes": "PAN suffix lookup using ILIKE or LIKE",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "EX-04",
     "category": "exact_match",
     "language": "serbian",
     "prompt": "Pronađi transakciju sa kodom odobrenja X9Y8Z7",
-    "expected_sql_contains": ["approval_code", "X9Y8Z7"],
+    "expected_sql_contains": [
+      "approval_code",
+      "X9Y8Z7"
+    ],
     "expected_result": "zero_or_more",
-    "notes": "Serbian exact approval code lookup"
+    "notes": "Serbian exact approval code lookup",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "EX-05",
     "category": "exact_match",
     "language": "serbian",
     "prompt": "Prikaži sve transakcije na terminalu T0201",
-    "expected_sql_contains": ["terminal_id", "T0201"],
+    "expected_sql_contains": [
+      "terminal_id",
+      "T0201"
+    ],
     "expected_result": "zero_or_more",
-    "notes": "Serbian terminal lookup"
+    "notes": "Serbian terminal lookup",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "RN-01",
     "category": "range_query",
     "language": "english",
     "prompt": "Show transactions with amount between 1000 and 5000 RSD",
-    "expected_sql_contains": ["amount", "1000", "5000"],
+    "expected_sql_contains": [
+      "amount",
+      "1000",
+      "5000"
+    ],
     "expected_result": "has_results",
-    "notes": "Amount range filter"
+    "notes": "Amount range filter",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "RN-02",
     "category": "range_query",
     "language": "english",
     "prompt": "Find all transactions from last 7 days",
-    "expected_sql_contains": ["transaction_date"],
+    "expected_sql_contains": [
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Date range — last 7 days"
+    "notes": "Date range — last 7 days",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "RN-03",
     "category": "range_query",
     "language": "english",
     "prompt": "Show transactions above 50000 RSD from last month",
-    "expected_sql_contains": ["amount", "50000", "transaction_date"],
+    "expected_sql_contains": [
+      "amount",
+      "50000",
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Combined amount + date range"
+    "notes": "Combined amount + date range",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "RN-04",
     "category": "range_query",
     "language": "english",
     "prompt": "Find transactions between April 1 and April 10 2026",
-    "expected_sql_contains": ["transaction_date", "2026"],
+    "expected_sql_contains": [
+      "transaction_date",
+      "2026"
+    ],
     "expected_result": "has_results",
-    "notes": "Explicit date range"
+    "notes": "Explicit date range",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "RN-05",
     "category": "range_query",
     "language": "serbian",
     "prompt": "Prikaži transakcije između 2000 i 10000 dinara",
-    "expected_sql_contains": ["amount", "2000", "10000"],
+    "expected_sql_contains": [
+      "amount",
+      "2000",
+      "10000"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian amount range"
+    "notes": "Serbian amount range",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "RN-06",
     "category": "range_query",
     "language": "serbian",
     "prompt": "Koje transakcije su bile prošle sedmice?",
-    "expected_sql_contains": ["transaction_date"],
+    "expected_sql_contains": [
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian last week date range"
+    "notes": "Serbian last week date range",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ST-01",
     "category": "status_filter",
     "language": "english",
     "prompt": "Show me all declined transactions",
-    "expected_sql_contains": ["status", "DECLINED"],
+    "expected_sql_contains": [
+      "status",
+      "DECLINED"
+    ],
     "expected_result": "has_results",
-    "notes": "Basic status filter — declined"
+    "notes": "Basic status filter — declined",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ST-02",
     "category": "status_filter",
     "language": "english",
     "prompt": "Find all approved transactions from today",
-    "expected_sql_contains": ["status", "APPROVED", "transaction_date"],
+    "expected_sql_contains": [
+      "status",
+      "APPROVED",
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Status + date filter"
+    "notes": "Status + date filter",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ST-03",
     "category": "status_filter",
     "language": "english",
     "prompt": "Show reversed and pending transactions from last week",
-    "expected_sql_contains": ["status"],
+    "expected_sql_contains": [
+      "status"
+    ],
     "expected_result": "has_results",
-    "notes": "Multiple status values"
+    "notes": "Multiple status values",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ST-04",
     "category": "status_filter",
     "language": "serbian",
     "prompt": "Pokaži mi sve odbijene transakcije od juče",
-    "expected_sql_contains": ["status", "DECLINED", "transaction_date"],
+    "expected_sql_contains": [
+      "status",
+      "DECLINED",
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian declined + yesterday"
+    "notes": "Serbian declined + yesterday",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ST-05",
     "category": "status_filter",
     "language": "serbian",
     "prompt": "Koliko odobrenih transakcija je bilo danas?",
-    "expected_sql_contains": ["status", "APPROVED", "transaction_date"],
+    "expected_sql_contains": [
+      "status",
+      "APPROVED",
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian approved today — count query"
+    "notes": "Serbian approved today — count query",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "AG-01",
     "category": "aggregation",
     "language": "english",
     "prompt": "Which terminal processed the most transactions?",
-    "expected_sql_contains": ["terminal_id", "COUNT"],
+    "expected_sql_contains": [
+      "terminal_id",
+      "COUNT"
+    ],
     "expected_result": "has_results",
-    "notes": "Group by terminal, count"
+    "notes": "Group by terminal, count",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "AG-02",
     "category": "aggregation",
     "language": "english",
     "prompt": "What is the total transaction amount per merchant this month?",
-    "expected_sql_contains": ["merchant_name", "SUM", "amount"],
+    "expected_sql_contains": [
+      "merchant_name",
+      "SUM",
+      "amount"
+    ],
     "expected_result": "has_results",
-    "notes": "Sum by merchant"
+    "notes": "Sum by merchant",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "AG-03",
     "category": "aggregation",
     "language": "english",
     "prompt": "Which card brand is used most frequently?",
-    "expected_sql_contains": ["card_brand", "COUNT"],
+    "expected_sql_contains": [
+      "card_brand",
+      "COUNT"
+    ],
     "expected_result": "has_results",
-    "notes": "Most frequent card brand"
+    "notes": "Most frequent card brand",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "AG-04",
     "category": "aggregation",
     "language": "english",
     "prompt": "How many transactions were declined per merchant last month?",
-    "expected_sql_contains": ["merchant_name", "COUNT", "DECLINED"],
+    "expected_sql_contains": [
+      "merchant_name",
+      "COUNT",
+      "DECLINED"
+    ],
     "expected_result": "has_results",
-    "notes": "Count declined by merchant"
+    "notes": "Count declined by merchant",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "AG-05",
     "category": "aggregation",
     "language": "serbian",
     "prompt": "Koji terminal je procesirao najveći ukupan iznos transakcija?",
-    "expected_sql_contains": ["terminal_id", "SUM", "amount"],
+    "expected_sql_contains": [
+      "terminal_id",
+      "SUM",
+      "amount"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian sum by terminal"
+    "notes": "Serbian sum by terminal",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "AG-06",
     "category": "aggregation",
     "language": "serbian",
     "prompt": "Koliko transakcija je bilo po kategoriji trgovca prošlog meseca?",
-    "expected_sql_contains": ["merchant_category", "COUNT"],
+    "expected_sql_contains": [
+      "merchant_category",
+      "COUNT"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian count by merchant category"
+    "notes": "Serbian count by merchant category",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MF-01",
     "category": "multi_filter",
     "language": "english",
     "prompt": "Show declined Visa contactless transactions above 5000 RSD from last week",
-    "expected_sql_contains": ["DECLINED", "VISA", "CONTACTLESS", "5000", "transaction_date"],
+    "expected_sql_contains": [
+      "DECLINED",
+      "VISA",
+      "CONTACTLESS",
+      "5000",
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Classic multi-filter combination"
+    "notes": "Classic multi-filter combination",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MF-02",
     "category": "multi_filter",
     "language": "english",
     "prompt": "Find approved Mastercard credit card purchases at Maxi Supermarket",
-    "expected_sql_contains": ["APPROVED", "MASTERCARD", "CREDIT", "Maxi"],
+    "expected_sql_contains": [
+      "APPROVED",
+      "MASTERCARD",
+      "CREDIT",
+      "Maxi"
+    ],
     "expected_result": "has_results",
-    "notes": "Brand + class + merchant filter"
+    "notes": "Brand + class + merchant filter",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MF-03",
     "category": "multi_filter",
     "language": "english",
     "prompt": "Show corporate card transactions above 20000 RSD that were declined",
-    "expected_sql_contains": ["CORPORATE", "20000", "DECLINED"],
+    "expected_sql_contains": [
+      "CORPORATE",
+      "20000",
+      "DECLINED"
+    ],
     "expected_result": "has_results",
-    "notes": "Card class + amount + status"
+    "notes": "Card class + amount + status",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MF-04",
     "category": "multi_filter",
     "language": "serbian",
     "prompt": "Pokaži odbijene Visa beskontaktne transakcije iznad 5000 dinara prošle sedmice",
-    "expected_sql_contains": ["DECLINED", "VISA", "CONTACTLESS", "5000"],
+    "expected_sql_contains": [
+      "DECLINED",
+      "VISA",
+      "CONTACTLESS",
+      "5000"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian version of MF-01"
+    "notes": "Serbian version of MF-01",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MF-05",
     "category": "multi_filter",
     "language": "serbian",
     "prompt": "Prikaži sve UnionPay transakcije u hotelima iznad 100 EUR",
-    "expected_sql_contains": ["UNIONPAY", "HOTEL", "100", "EUR"],
+    "expected_sql_contains": [
+      "UNIONPAY",
+      "HOTEL",
+      "100",
+      "EUR"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian UnionPay hotel EUR transactions"
+    "notes": "Serbian UnionPay hotel EUR transactions",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MT-01",
@@ -249,23 +373,37 @@
     "turns": [
       {
         "prompt": "Show declined transactions from last month",
-        "expected_sql_contains": ["DECLINED", "transaction_date"],
+        "expected_sql_contains": [
+          "DECLINED",
+          "transaction_date"
+        ],
         "expected_result": "has_results"
       },
       {
         "prompt": "Only Visa cards",
-        "expected_sql_contains": ["DECLINED", "VISA", "transaction_date"],
+        "expected_sql_contains": [
+          "DECLINED",
+          "VISA",
+          "transaction_date"
+        ],
         "expected_result": "has_results",
         "notes": "Must retain DECLINED and date filter from turn 1"
       },
       {
         "prompt": "Sort by amount descending",
-        "expected_sql_contains": ["DECLINED", "VISA", "ORDER BY", "amount", "DESC"],
+        "expected_sql_contains": [
+          "DECLINED",
+          "VISA",
+          "ORDER BY",
+          "amount",
+          "DESC"
+        ],
         "expected_result": "has_results",
         "notes": "Must retain all previous filters"
       }
     ],
-    "notes": "3-turn refinement chain"
+    "notes": "3-turn refinement chain",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MT-02",
@@ -274,17 +412,25 @@
     "turns": [
       {
         "prompt": "Show transactions at NIS Petrol above 3000 RSD",
-        "expected_sql_contains": ["NIS Petrol", "3000"],
+        "expected_sql_contains": [
+          "NIS Petrol",
+          "3000"
+        ],
         "expected_result": "has_results"
       },
       {
         "prompt": "Samo odbijene",
-        "expected_sql_contains": ["NIS Petrol", "3000", "DECLINED"],
+        "expected_sql_contains": [
+          "NIS Petrol",
+          "3000",
+          "DECLINED"
+        ],
         "expected_result": "zero_or_more",
         "notes": "Serbian refinement on English query — must retain merchant and amount"
       }
     ],
-    "notes": "Language switch mid-session"
+    "notes": "Language switch mid-session",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "MT-03",
@@ -293,59 +439,83 @@
     "turns": [
       {
         "prompt": "Pokaži transakcije od juče",
-        "expected_sql_contains": ["transaction_date"],
+        "expected_sql_contains": [
+          "transaction_date"
+        ],
         "expected_result": "has_results"
       },
       {
         "prompt": "Samo one iznad 10000 dinara",
-        "expected_sql_contains": ["transaction_date", "10000"],
+        "expected_sql_contains": [
+          "transaction_date",
+          "10000"
+        ],
         "expected_result": "has_results",
         "notes": "Must retain date filter"
       },
       {
         "prompt": "Koji trgovac se pojavljuje najčešće?",
-        "expected_sql_contains": ["merchant_name", "COUNT", "transaction_date", "10000"],
+        "expected_sql_contains": [
+          "merchant_name",
+          "COUNT",
+          "transaction_date",
+          "10000"
+        ],
         "expected_result": "has_results",
         "notes": "Aggregation on filtered set"
       }
     ],
-    "notes": "Serbian 3-turn with aggregation at end"
+    "notes": "Serbian 3-turn with aggregation at end",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ED-01",
     "category": "edge_case",
     "language": "english",
     "prompt": "Find transaction with approval code ZZZZZZ",
-    "expected_sql_contains": ["approval_code", "ZZZZZZ"],
+    "expected_sql_contains": [
+      "approval_code",
+      "ZZZZZZ"
+    ],
     "expected_result": "no_results",
-    "notes": "Non-existent approval code — should return empty result gracefully"
+    "notes": "Non-existent approval code — should return empty result gracefully",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ED-02",
     "category": "edge_case",
     "language": "english",
     "prompt": "Show transactions from next year",
-    "expected_sql_contains": ["transaction_date"],
+    "expected_sql_contains": [
+      "transaction_date"
+    ],
     "expected_result": "no_results",
-    "notes": "Future date — no data exists, should handle gracefully"
+    "notes": "Future date — no data exists, should handle gracefully",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ED-03",
     "category": "edge_case",
     "language": "english",
     "prompt": "Find transactions around 5000 RSD",
-    "expected_sql_contains": ["amount"],
+    "expected_sql_contains": [
+      "amount"
+    ],
     "expected_result": "has_results",
-    "notes": "Approximate amount — agent should interpret 'around' as a range e.g. 4500-5500"
+    "notes": "Approximate amount — agent should interpret 'around' as a range e.g. 4500-5500",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ED-04",
     "category": "edge_case",
     "language": "english",
     "prompt": "Show me recent transactions",
-    "expected_sql_contains": ["transaction_date"],
+    "expected_sql_contains": [
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Ambiguous date — agent should interpret 'recent' as last 7 or 30 days"
+    "notes": "Ambiguous date — agent should interpret 'recent' as last 7 or 30 days",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ED-05",
@@ -354,7 +524,8 @@
     "prompt": "Delete all transactions",
     "expected_sql_contains": [],
     "expected_result": "blocked",
-    "notes": "Destructive query — must be blocked by read-only guard, not executed"
+    "notes": "Destructive query — must be blocked by read-only guard, not executed",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ED-06",
@@ -363,7 +534,8 @@
     "prompt": "Obriši sve transakcije",
     "expected_sql_contains": [],
     "expected_result": "blocked",
-    "notes": "Serbian destructive query — must be blocked"
+    "notes": "Serbian destructive query — must be blocked",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ED-07",
@@ -372,158 +544,227 @@
     "prompt": "Show me the weather in Belgrade",
     "expected_sql_contains": [],
     "expected_result": "clarification",
-    "notes": "Completely unrelated query — agent should explain it can only answer transaction questions"
+    "notes": "Completely unrelated query — agent should explain it can only answer transaction questions",
+    "router_current_channel": "MERCHANT"
   },
-
   {
     "id": "CH-01",
     "category": "cardholder",
     "language": "english",
     "prompt": "Show my transactions for card ending in 4242",
-    "expected_sql_contains": ["pan_masked", "4242"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "4242"
+    ],
     "expected_result": "has_results",
-    "notes": "Basic cardholder PAN lookup — requires seeded data for 4242"
+    "notes": "Basic cardholder PAN lookup — requires seeded data for 4242",
+    "router_current_channel": "CARDHOLDER"
   },
   {
     "id": "CH-02",
     "category": "cardholder",
     "language": "english",
     "prompt": "Show me declined transactions on my card ending in 5555",
-    "expected_sql_contains": ["pan_masked", "5555", "DECLINED"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "5555",
+      "DECLINED"
+    ],
     "expected_result": "zero_or_more",
-    "notes": "Cardholder declined filter — PAN isolation + status"
+    "notes": "Cardholder declined filter — PAN isolation + status",
+    "router_current_channel": "CARDHOLDER"
   },
   {
     "id": "CH-03",
     "category": "cardholder",
     "language": "serbian",
     "prompt": "Prikaži mi transakcije za karticu koja se završava sa 1111",
-    "expected_sql_contains": ["pan_masked", "1111"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "1111"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian cardholder PAN lookup for DINACARD demo card"
+    "notes": "Serbian cardholder PAN lookup for DINACARD demo card",
+    "router_current_channel": "CARDHOLDER"
   },
   {
     "id": "CH-04",
     "category": "cardholder",
     "language": "english",
     "prompt": "Show contactless payments over 1000 RSD on my card ending in 4242 last month",
-    "expected_sql_contains": ["pan_masked", "4242", "CONTACTLESS", "1000"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "4242",
+      "CONTACTLESS",
+      "1000"
+    ],
     "expected_result": "zero_or_more",
-    "notes": "Cardholder multi-filter: PAN + card_type + amount + date"
+    "notes": "Cardholder multi-filter: PAN + card_type + amount + date",
+    "router_current_channel": "CARDHOLDER"
   },
-
   {
     "id": "ME-01",
     "category": "merchant",
     "language": "english",
     "prompt": "Show all transactions at Maxi Supermarket last week",
-    "expected_sql_contains": ["merchant_name", "Maxi"],
+    "expected_sql_contains": [
+      "merchant_name",
+      "Maxi"
+    ],
     "expected_result": "has_results",
-    "notes": "Merchant name filter — Maxi seeded in demo data"
+    "notes": "Merchant name filter — Maxi seeded in demo data",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ME-02",
     "category": "merchant",
     "language": "english",
     "prompt": "How many declined transactions did my terminals have this month and what was the total amount?",
-    "expected_sql_contains": ["DECLINED", "COUNT", "SUM"],
+    "expected_sql_contains": [
+      "DECLINED",
+      "COUNT",
+      "SUM"
+    ],
     "expected_result": "has_results",
-    "notes": "Merchant aggregate: declined count + sum"
+    "notes": "Merchant aggregate: declined count + sum",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ME-03",
     "category": "merchant",
     "language": "english",
     "prompt": "Show last 50 transactions at Gigatron and export to Excel",
-    "expected_sql_contains": ["Gigatron"],
+    "expected_sql_contains": [
+      "Gigatron"
+    ],
     "expected_result": "has_results",
-    "expected_flags": {"has_export": true},
-    "notes": "Merchant Excel export — export_requested flag must be true"
+    "expected_flags": {
+      "has_export": true
+    },
+    "notes": "Merchant Excel export — export_requested flag must be true",
+    "router_current_channel": "MERCHANT"
   },
   {
     "id": "ME-04",
     "category": "merchant",
     "language": "serbian",
     "prompt": "Prikaži ukupan promet po danima za prošlu nedelju, sortiraj po danu",
-    "expected_sql_contains": ["GROUP BY", "transaction_date"],
+    "expected_sql_contains": [
+      "GROUP BY",
+      "transaction_date"
+    ],
     "expected_result": "has_results",
-    "notes": "Serbian merchant daily revenue grouped by date"
+    "notes": "Serbian merchant daily revenue grouped by date",
+    "router_current_channel": "MERCHANT"
   },
-
   {
     "id": "DI-01",
     "category": "dispute",
     "language": "english",
     "prompt": "I was charged twice at Maxi for my Visa card ending in 4242, amount 3240.50 RSD",
-    "expected_sql_contains": ["pan_masked", "4242", "3240.50"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "4242",
+      "3240.50"
+    ],
     "expected_result": "dispute_found",
-    "notes": "Core dispute detection — requires demo_seed.py duplicate pair for 4242 at Maxi"
+    "notes": "Core dispute detection — requires demo_seed.py duplicate pair for 4242 at Maxi",
+    "router_current_channel": "DISPUTE"
   },
   {
     "id": "DI-02",
     "category": "dispute",
     "language": "english",
     "prompt": "I was charged twice at NIS Petrol for card ending in 5555, amount 4500 RSD",
-    "expected_sql_contains": ["pan_masked", "5555"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "5555"
+    ],
     "expected_result": "dispute_found",
-    "notes": "NIS Petrol duplicate pair — requires demo_seed.py for 5555"
+    "notes": "NIS Petrol duplicate pair — requires demo_seed.py for 5555",
+    "router_current_channel": "DISPUTE"
   },
   {
     "id": "DI-03",
     "category": "dispute",
     "language": "english",
     "prompt": "I was charged twice at a restaurant for card 4242, amount 99999 RSD yesterday",
-    "expected_sql_contains": ["pan_masked", "4242"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "4242"
+    ],
     "expected_result": "no_dispute",
-    "notes": "False positive — amount does not match any seeded duplicate, agent should report no duplicate found"
+    "notes": "False positive — amount does not match any seeded duplicate, agent should report no duplicate found",
+    "router_current_channel": "DISPUTE"
   },
   {
     "id": "DI-04",
     "category": "dispute",
     "language": "serbian",
     "prompt": "Dvaput su mi naplatili u Gigatronu, kartica 1111, iznos 42500 dinara",
-    "expected_sql_contains": ["pan_masked", "1111"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "1111"
+    ],
     "expected_result": "dispute_found",
-    "notes": "Serbian dispute — Gigatron duplicate pair for card 1111 from demo_seed.py"
+    "notes": "Serbian dispute — Gigatron duplicate pair for card 1111 from demo_seed.py",
+    "router_current_channel": "DISPUTE"
   },
-
   {
     "id": "LO-01",
     "category": "loyalty",
     "language": "english",
     "prompt": "Check my loyalty points for card ending in 4242",
-    "expected_sql_contains": ["pan_masked", "4242", "loyalty_accounts"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "4242",
+      "loyalty_accounts"
+    ],
     "expected_result": "enrolled",
-    "notes": "Enrolled card — VISA Silver demo account should be found"
+    "notes": "Enrolled card — VISA Silver demo account should be found",
+    "router_current_channel": "LOYALTY"
   },
   {
     "id": "LO-02",
     "category": "loyalty",
     "language": "english",
     "prompt": "My points were not credited for card ending in 4242",
-    "expected_sql_contains": ["pan_masked", "4242", "loyalty_points_credited"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "4242",
+      "loyalty_points_credited"
+    ],
     "expected_result": "credit_recommended",
-    "notes": "Missing points detection — requires demo_seed.py uncredited transactions for 4242"
+    "notes": "Missing points detection — requires demo_seed.py uncredited transactions for 4242",
+    "router_current_channel": "LOYALTY"
   },
   {
     "id": "LO-03",
     "category": "loyalty",
     "language": "english",
     "prompt": "Check loyalty points for card ending in 0000",
-    "expected_sql_contains": ["pan_masked", "0000"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "0000"
+    ],
     "expected_result": "not_enrolled",
-    "notes": "Non-enrolled card — agent should report PAN not in loyalty_accounts"
+    "notes": "Non-enrolled card — agent should report PAN not in loyalty_accounts",
+    "router_current_channel": "LOYALTY"
   },
   {
     "id": "LO-04",
     "category": "loyalty",
     "language": "serbian",
     "prompt": "Moji poeni nisu dodati za karticu 1111",
-    "expected_sql_contains": ["pan_masked", "1111", "loyalty_points_credited"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "1111",
+      "loyalty_points_credited"
+    ],
     "expected_result": "credit_recommended",
-    "notes": "Serbian missing points — DINACARD Gold demo card"
+    "notes": "Serbian missing points — DINACARD Gold demo card",
+    "router_current_channel": "LOYALTY"
   },
-
   {
     "id": "RT-01",
     "category": "router",
@@ -549,7 +790,11 @@
     "category": "router",
     "language": "english",
     "prompt": "Show my declined transactions for card 4242",
-    "expected_sql_contains": ["pan_masked", "4242", "DECLINED"],
+    "expected_sql_contains": [
+      "pan_masked",
+      "4242",
+      "DECLINED"
+    ],
     "expected_result": "zero_or_more",
     "router_current_channel": "CARDHOLDER",
     "notes": "Correct channel — Cardholder query stays on Cardholder, no switch suggested"

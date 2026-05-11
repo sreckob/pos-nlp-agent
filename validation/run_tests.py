@@ -271,6 +271,10 @@ async def run_multi_turn_test(ws_url: str, test: dict) -> dict:
             start = time.time()
             all_passed = True
 
+            # Prime the channel before the first turn if specified.
+            if test.get("router_current_channel"):
+                await prime_channel(ws, test["router_current_channel"])
+
             for i, turn in enumerate(test["turns"]):
                 response = await send_and_receive(ws, turn["prompt"])
                 sql = response.get("sql")
@@ -307,7 +311,11 @@ async def run_multi_turn_test(ws_url: str, test: dict) -> dict:
 
 # ── Main runner ───────────────────────────────────────────────
 
-async def run_all_tests(ws_url: str, category_filter: Optional[str] = None) -> dict:
+async def run_all_tests(
+    ws_url: str,
+    category_filter: Optional[str] = None,
+    temperature_label: Optional[str] = None,
+) -> dict:
     with open(TEST_CASES_FILE) as f:
         test_cases = json.load(f)
 
@@ -354,8 +362,9 @@ async def run_all_tests(ws_url: str, category_filter: Optional[str] = None) -> d
             categories[cat]["passed"] += 1
 
     return {
-        "timestamp": datetime.utcnow().isoformat(),
-        "ws_url":    ws_url,
+        "timestamp":         datetime.utcnow().isoformat(),
+        "ws_url":            ws_url,
+        "temperature_label": temperature_label,  # e.g. "router=0.1,specialist=0.3"
         "summary": {
             "total":        total,
             "passed":       passed,
@@ -378,6 +387,8 @@ def print_summary(report: dict):
     s = report["summary"]
     print("\n" + "=" * 55)
     print(f"VALIDATION RESULTS — {report['timestamp'][:10]}")
+    if report.get("temperature_label"):
+        print(f"Temperature:   {report['temperature_label']}")
     print("=" * 55)
     print(f"Total:    {s['total']}")
     print(f"Passed:   {s['passed']}")
@@ -391,7 +402,13 @@ def print_summary(report: dict):
     print("=" * 55)
 
 
-async def main(ws_url: str, category: Optional[str], output: Optional[str], seed: bool):
+async def main(
+    ws_url: str,
+    category: Optional[str],
+    output: Optional[str],
+    seed: bool,
+    temperature: Optional[str],
+):
     if seed:
         print("Seeding database...")
         run_seed_scripts()
@@ -399,7 +416,11 @@ async def main(ws_url: str, category: Optional[str], output: Optional[str], seed
         await asyncio.sleep(2)
         print()
 
-    report = await run_all_tests(ws_url, category)
+    if temperature:
+        print(f"Note: temperature label = '{temperature}'")
+        print("      Make sure uvicorn is running with matching TEMP_* env vars.\n")
+
+    report = await run_all_tests(ws_url, category, temperature)
     print_summary(report)
 
     if output:
@@ -414,8 +435,12 @@ if __name__ == "__main__":
                         help="WebSocket base URL (default: ws://localhost:8000)")
     parser.add_argument("--category", help="Filter by category (e.g. dispute, loyalty, router)")
     parser.add_argument("--output",   help="Save full JSON report to file")
-    parser.add_argument("--seed",     action="store_true",
+    parser.add_argument("--seed",        action="store_true",
                         help="Run topup.py + demo_seed.py before tests")
+    parser.add_argument("--temperature", default=None,
+                        help="Label for this temperature run, e.g. 'router=0.1,specialist=0.3'. "
+                             "Stored in the report for sweep comparison. "
+                             "Set matching TEMP_* env vars in backend/.env and restart uvicorn first.")
     args = parser.parse_args()
 
-    asyncio.run(main(args.url, args.category, args.output, args.seed))
+    asyncio.run(main(args.url, args.category, args.output, args.seed, args.temperature))
