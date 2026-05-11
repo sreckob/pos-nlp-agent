@@ -18,13 +18,14 @@ class Settings:
     LOG_FILE: str = os.getenv("LOG_FILE", "agent_logs.jsonl")
     OPS_API_KEY: str = os.getenv("OPS_API_KEY", "")
 
-    # Temperature per node — override via env vars or experiment .env files
+    # Temperature per node — override via env vars or tune_temperature.py sweep
     TEMPERATURES: dict = {
         "router":     float(os.getenv("TEMP_ROUTER",     "0.0")),
         "cardholder": float(os.getenv("TEMP_CARDHOLDER", "0.0")),
         "merchant":   float(os.getenv("TEMP_MERCHANT",   "0.0")),
         "dispute":    float(os.getenv("TEMP_DISPUTE",    "0.0")),
         "loyalty":    float(os.getenv("TEMP_LOYALTY",    "0.0")),
+        "approver":   float(os.getenv("TEMP_APPROVER",   "0.0")),
     }
 
 

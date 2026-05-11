@@ -46,6 +46,7 @@ def _call_claude(system: str, payload: str) -> Dict:
         client.messages.create(
             model=settings.CLAUDE_MODEL,
             max_tokens=400,
+            temperature=settings.TEMPERATURES.get("approver", 0.0),
             system=system,
             messages=[{"role": "user", "content": payload}],
         )
