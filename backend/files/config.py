@@ -16,6 +16,7 @@ class Settings:
     CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
     MAX_ROWS_RETURNED: int = int(os.getenv("MAX_ROWS_RETURNED", "100"))
     LOG_FILE: str = os.getenv("LOG_FILE", "agent_logs.jsonl")
+    OPS_API_KEY: str = os.getenv("OPS_API_KEY", "")
 
     # Temperature per node — override via env vars or experiment .env files
     TEMPERATURES: dict = {

@@ -6,6 +6,7 @@ import { fetchOpsQueue } from "../api";
 export default function OpsQueue({ selectedId, onSelect, refreshKey }) {
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -15,8 +16,11 @@ export default function OpsQueue({ selectedId, onSelect, refreshKey }) {
         if (!alive) return;
         setPending(data.pending || []);
         setLoading(false);
+        setError(false);
       } catch {
+        if (!alive) return;
         setLoading(false);
+        setError(true);
       }
     }
     load();
@@ -30,9 +34,14 @@ export default function OpsQueue({ selectedId, onSelect, refreshKey }) {
         <span style={styles.title}>Pending queue</span>
         <span style={styles.count}>{pending.length}</span>
       </div>
+      {error && (
+        <div style={styles.errorBanner}>
+          ⚠ Server connection lost — retrying…
+        </div>
+      )}
       <div style={styles.list}>
-        {loading && <div style={styles.empty}>Loading…</div>}
-        {!loading && pending.length === 0 && (
+        {loading && !error && <div style={styles.empty}>Loading…</div>}
+        {!loading && !error && pending.length === 0 && (
           <div style={styles.empty}>No pending approvals.</div>
         )}
         {pending.map(item => (
@@ -92,7 +101,11 @@ const styles = {
     padding: "2px 8px", borderRadius: 10,
   },
   list:  { flex: 1, overflowY: "auto" },
-  empty: { padding: 20, color: "#94A3B8", fontSize: 13, textAlign: "center" },
+  empty:       { padding: 20, color: "#94A3B8", fontSize: 13, textAlign: "center" },
+  errorBanner: {
+    background: "#FEE2E2", color: "#991B1B", fontSize: 12,
+    padding: "8px 14px", borderBottom: "1px solid #FCA5A5",
+  },
   item: {
     width: "100%", textAlign: "left", padding: "10px 14px",
     borderTop: "1px solid #F1F5F9", borderLeft: "3px solid",

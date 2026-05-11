@@ -21,11 +21,12 @@ import uuid
 from datetime import datetime
 from typing import Dict, Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from config import settings
+from db import init_pool, close_pool
 from session import SessionStore
 from agent import run_agent
 from approval_agent import review_dispute, review_loyalty_credit
@@ -52,9 +53,9 @@ def _is_uuid(value: str) -> bool:
 def _tx_exists(tx_id: str) -> bool:
     if not _is_uuid(tx_id):
         return False
-    safe = str(tx_id).replace("'", "")
     r = execute_query(
-        f"SELECT 1 FROM transactions WHERE transaction_id = '{safe}' LIMIT 1"
+        "SELECT 1 FROM transactions WHERE transaction_id = %s LIMIT 1",
+        (str(tx_id),),
     )
     return bool(r.get("rows"))
 
@@ -66,6 +67,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="POS NLP Query Agent", version="2.0.0")
 
+
+def require_ops_key(x_ops_key: str = Header(...)):
+    """FastAPI dependency — blocks /ops/* unless X-Ops-Key header matches OPS_API_KEY."""
+    if not settings.OPS_API_KEY:
+        raise HTTPException(status_code=500, detail="OPS_API_KEY not configured on server")
+    if x_ops_key != settings.OPS_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid ops key")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -73,6 +82,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup():
+    init_pool(settings.DATABASE_URL)
+
+@app.on_event("shutdown")
+async def shutdown():
+    close_pool()
+
 
 session_store = SessionStore()
 
@@ -329,13 +347,13 @@ async def loyalty_balance(pan_masked: str):
 
 
 # ── Ops endpoints ─────────────────────────────────────────────
-@app.get("/ops/queue")
+@app.get("/ops/queue", dependencies=[Depends(require_ops_key)])
 async def ops_queue():
     """List pending approvals for the ops console."""
     return {"pending": pending_store.list_pending()}
 
 
-@app.get("/ops/pending/{approval_id}")
+@app.get("/ops/pending/{approval_id}", dependencies=[Depends(require_ops_key)])
 async def ops_pending_detail(approval_id: str):
     """
     Fetch one pending row + the approver agent's auto-recommendation.
@@ -370,7 +388,7 @@ async def ops_pending_detail(approval_id: str):
     return row
 
 
-@app.post("/ops/decide")
+@app.post("/ops/decide", dependencies=[Depends(require_ops_key)])
 async def ops_decide(req: OpsDecideRequest):
     """Ops decision: approve or reject. Approval triggers write_ops + customer push."""
     decision = req.decision.upper()

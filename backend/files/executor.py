@@ -16,6 +16,7 @@ import psycopg2
 import psycopg2.extras
 
 from config import settings
+from db import get_conn
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +58,10 @@ def serialize_row(row: dict) -> dict:
     return clean
 
 
-def execute_query(sql: str) -> Dict[str, Any]:
+def execute_query(sql: str, params: tuple = None) -> Dict[str, Any]:
     """
     Execute a safe SELECT query and return results.
+    Pass untrusted values via params — psycopg2 escapes them safely.
     Returns: {success, rows, row_count, error}
     """
     if not is_safe_sql(sql):
@@ -76,12 +78,11 @@ def execute_query(sql: str) -> Dict[str, Any]:
         sql = f"{sql} LIMIT {settings.MAX_ROWS_RETURNED}"
 
     try:
-        conn = psycopg2.connect(settings.DATABASE_URL)
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql)
-        rows = [serialize_row(dict(row)) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
+        with get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(sql, params)
+            rows = [serialize_row(dict(row)) for row in cur.fetchall()]
+            cur.close()
         return {"success": True, "rows": rows, "row_count": len(rows), "error": None}
 
     except psycopg2.Error as e:

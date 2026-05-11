@@ -70,11 +70,11 @@ def _reject(reason: str) -> Dict[str, Any]:
 def _fetch_tx(tx_id: str) -> Dict:
     if not tx_id:
         return {}
-    safe_id = tx_id.replace("'", "")
     r = execute_query(
-        f"SELECT transaction_id, transaction_date, amount, currency, status, "
-        f"approval_code, pan_masked, merchant_id, merchant_name "
-        f"FROM transactions WHERE transaction_id = '{safe_id}'"
+        "SELECT transaction_id, transaction_date, amount, currency, status, "
+        "approval_code, pan_masked, merchant_id, merchant_name "
+        "FROM transactions WHERE transaction_id = %s",
+        (str(tx_id),),
     )
     return r["rows"][0] if r.get("rows") else {}
 
@@ -120,23 +120,23 @@ def review_dispute(original_tx_id: str, duplicate_tx_id: str) -> Dict[str, Any]:
 
 
 def _fetch_uncredited(pan_masked: str) -> List[Dict]:
-    safe = pan_masked.replace("'", "")
     r = execute_query(
-        f"SELECT transaction_id, amount, merchant_name, transaction_date, "
-        f"loyalty_points_earned, status, transaction_type, currency "
-        f"FROM transactions "
-        f"WHERE pan_masked = '{safe}' "
-        f"AND loyalty_points_earned > 0 "
-        f"AND loyalty_points_credited = FALSE"
+        "SELECT transaction_id, amount, merchant_name, transaction_date, "
+        "loyalty_points_earned, status, transaction_type, currency "
+        "FROM transactions "
+        "WHERE pan_masked = %s "
+        "AND loyalty_points_earned > 0 "
+        "AND loyalty_points_credited = FALSE",
+        (pan_masked,),
     )
     return r.get("rows", [])
 
 
 def _fetch_loyalty_account(pan_masked: str) -> Dict:
-    safe = pan_masked.replace("'", "")
     r = execute_query(
-        f"SELECT account_id, pan_masked, points, tier, total_spent "
-        f"FROM loyalty_accounts WHERE pan_masked = '{safe}'"
+        "SELECT account_id, pan_masked, points, tier, total_spent "
+        "FROM loyalty_accounts WHERE pan_masked = %s",
+        (pan_masked,),
     )
     return r["rows"][0] if r.get("rows") else {}
 

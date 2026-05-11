@@ -20,12 +20,9 @@ from typing import Any, Dict, Optional
 
 import psycopg2
 from config import settings
+from db import get_conn
 
 logger = logging.getLogger(__name__)
-
-
-def get_connection():
-    return psycopg2.connect(settings.DATABASE_URL)
 
 
 # ── Dispute reversal ──────────────────────────────────────────
@@ -51,55 +48,43 @@ def approve_dispute_reversal(
     resolved_at = datetime.utcnow()
 
     try:
-        conn = get_connection()
-        cur = conn.cursor()
+        with get_conn() as conn:
+            cur = conn.cursor()
 
-        # Mark original as DISPUTED → APPROVED (the valid charge)
-        cur.execute(
-            """
-            UPDATE transactions
-            SET dispute_status = 'APPROVED',
-                dispute_id     = %s,
-                disputed_at    = %s,
-                resolved_at    = %s
-            WHERE transaction_id = %s
-        """,
-            (dispute_id, resolved_at, resolved_at, original_tx_id),
-        )
+            # Mark original as DISPUTED → APPROVED (the valid charge)
+            cur.execute(
+                """
+                UPDATE transactions
+                SET dispute_status = 'APPROVED',
+                    dispute_id     = %s,
+                    disputed_at    = %s,
+                    resolved_at    = %s
+                WHERE transaction_id = %s
+            """,
+                (dispute_id, resolved_at, resolved_at, original_tx_id),
+            )
 
-        if cur.rowcount == 0:
-            conn.rollback()
-            conn.close()
-            return {
-                "success": False,
-                "message": f"Transaction {original_tx_id} not found.",
-            }
+            if cur.rowcount == 0:
+                raise ValueError(f"Transaction {original_tx_id} not found.")
 
-        # Mark duplicate as REVERSED (the erroneous charge)
-        cur.execute(
-            """
-            UPDATE transactions
-            SET status         = 'REVERSED',
-                dispute_status = 'APPROVED',
-                dispute_id     = %s,
-                disputed_at    = %s,
-                resolved_at    = %s
-            WHERE transaction_id = %s
-        """,
-            (dispute_id, resolved_at, resolved_at, duplicate_tx_id),
-        )
+            # Mark duplicate as REVERSED (the erroneous charge)
+            cur.execute(
+                """
+                UPDATE transactions
+                SET status         = 'REVERSED',
+                    dispute_status = 'APPROVED',
+                    dispute_id     = %s,
+                    disputed_at    = %s,
+                    resolved_at    = %s
+                WHERE transaction_id = %s
+            """,
+                (dispute_id, resolved_at, resolved_at, duplicate_tx_id),
+            )
 
-        if cur.rowcount == 0:
-            conn.rollback()
-            conn.close()
-            return {
-                "success": False,
-                "message": f"Duplicate transaction {duplicate_tx_id} not found.",
-            }
+            if cur.rowcount == 0:
+                raise ValueError(f"Duplicate transaction {duplicate_tx_id} not found.")
 
-        conn.commit()
-        cur.close()
-        conn.close()
+            cur.close()
 
         logger.info(
             f"Dispute reversal approved: "
@@ -130,26 +115,22 @@ def reject_dispute(
     Marks transactions as REJECTED so they are not actioned again.
     """
     try:
-        conn = get_connection()
-        cur = conn.cursor()
         now = datetime.utcnow()
-
-        tx_ids = [t for t in [duplicate_tx_id, original_tx_id] if t]
-        for tx_id in tx_ids:
-            cur.execute(
-                """
-                UPDATE transactions
-                SET dispute_status = 'REJECTED',
-                    disputed_at    = %s,
-                    resolved_at    = %s
-                WHERE transaction_id = %s
-            """,
-                (now, now, tx_id),
-            )
-
-        conn.commit()
-        cur.close()
-        conn.close()
+        with get_conn() as conn:
+            cur = conn.cursor()
+            tx_ids = [t for t in [duplicate_tx_id, original_tx_id] if t]
+            for tx_id in tx_ids:
+                cur.execute(
+                    """
+                    UPDATE transactions
+                    SET dispute_status = 'REJECTED',
+                        disputed_at    = %s,
+                        resolved_at    = %s
+                    WHERE transaction_id = %s
+                """,
+                    (now, now, tx_id),
+                )
+            cur.close()
 
         logger.info(f"Dispute rejected: {duplicate_tx_id[:8]}")
         return {"success": True, "message": "Dispute claim has been rejected."}
@@ -177,63 +158,52 @@ def credit_loyalty_points(pan_masked: str, points_to_add: int) -> Dict[str, Any]
         return {"success": False, "message": "Invalid PAN or points amount."}
 
     try:
-        conn = get_connection()
-        cur = conn.cursor()
         now = datetime.utcnow()
+        with get_conn() as conn:
+            cur = conn.cursor()
 
-        # Check account exists
-        cur.execute(
-            """
-            SELECT points, tier, total_spent
-            FROM loyalty_accounts
-            WHERE pan_masked = %s
-        """,
-            (pan_masked,),
-        )
+            # Check account exists
+            cur.execute(
+                """
+                SELECT points, tier, total_spent
+                FROM loyalty_accounts
+                WHERE pan_masked = %s
+            """,
+                (pan_masked,),
+            )
 
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return {
-                "success": False,
-                "message": f"No loyalty account found for card {pan_masked}.",
-            }
+            row = cur.fetchone()
+            if not row:
+                raise ValueError(f"No loyalty account found for card {pan_masked}.")
 
-        current_points, current_tier, total_spent = row
-        new_balance = current_points + points_to_add
+            current_points, current_tier, total_spent = row
+            new_balance = current_points + points_to_add
+            new_tier = calculate_tier(float(total_spent or 0))
 
-        # Calculate new tier based on total_spent
-        new_tier = calculate_tier(float(total_spent or 0))
+            cur.execute(
+                """
+                UPDATE loyalty_accounts
+                SET points       = points + %s,
+                    tier         = %s,
+                    last_updated = %s
+                WHERE pan_masked = %s
+            """,
+                (points_to_add, new_tier, now, pan_masked),
+            )
 
-        # Update loyalty account
-        cur.execute(
-            """
-            UPDATE loyalty_accounts
-            SET points       = points + %s,
-                tier         = %s,
-                last_updated = %s
-            WHERE pan_masked = %s
-        """,
-            (points_to_add, new_tier, now, pan_masked),
-        )
+            cur.execute(
+                """
+                UPDATE transactions
+                SET loyalty_points_credited = TRUE
+                WHERE pan_masked            = %s
+                  AND loyalty_points_earned  > 0
+                  AND loyalty_points_credited = FALSE
+            """,
+                (pan_masked,),
+            )
 
-        # Mark uncredited transactions as credited
-        cur.execute(
-            """
-            UPDATE transactions
-            SET loyalty_points_credited = TRUE
-            WHERE pan_masked            = %s
-              AND loyalty_points_earned  > 0
-              AND loyalty_points_credited = FALSE
-        """,
-            (pan_masked,),
-        )
-
-        transactions_updated = cur.rowcount
-
-        conn.commit()
-        cur.close()
-        conn.close()
+            transactions_updated = cur.rowcount
+            cur.close()
 
         logger.info(
             f"Loyalty credit: pan={pan_masked[-4:]} "
@@ -282,21 +252,18 @@ def get_loyalty_balance(pan_masked: str) -> Dict[str, Any]:
     Used to confirm credit was applied.
     """
     try:
-        conn = get_connection()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT points, tier, total_spent, last_updated
-            FROM loyalty_accounts
-            WHERE pan_masked = %s
-        """,
-            (pan_masked,),
-        )
-
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT points, tier, total_spent, last_updated
+                FROM loyalty_accounts
+                WHERE pan_masked = %s
+            """,
+                (pan_masked,),
+            )
+            row = cur.fetchone()
+            cur.close()
 
         if not row:
             return {"success": False, "enrolled": False}

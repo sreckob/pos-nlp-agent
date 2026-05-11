@@ -14,6 +14,12 @@ const API_BASE = process.env.REACT_APP_API_URL
 
 function url(path) { return API_BASE + path; }
 
+// Ops console key — set REACT_APP_OPS_KEY in .env (local) and Vercel env vars (prod)
+const OPS_KEY = process.env.REACT_APP_OPS_KEY || "";
+function opsHeaders() {
+  return { "Content-Type": "application/json", "x-ops-key": OPS_KEY };
+}
+
 export function createWebSocket(sessionId, onMessage, onOpen, onError, onClose) {
   const ws = new WebSocket(`${WS_BASE}/ws/${sessionId}`);
   ws.onopen    = () => { if (onOpen)  onOpen();    };
@@ -73,19 +79,19 @@ export async function submitLoyalty(payload) {
 
 // ── Ops-side: queue + decide ──────────────────────────────────
 export async function fetchOpsQueue() {
-  const res = await fetch(url("/ops/queue"));
+  const res = await fetch(url("/ops/queue"), { headers: opsHeaders() });
   return res.json();
 }
 
 export async function fetchPendingDetail(approvalId) {
-  const res = await fetch(url(`/ops/pending/${approvalId}`));
+  const res = await fetch(url(`/ops/pending/${approvalId}`), { headers: opsHeaders() });
   return res.json();
 }
 
 export async function decideApproval(approvalId, decision, overrideSummary = null) {
   const res = await fetch(url("/ops/decide"), {
     method:  "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(),
     body:    JSON.stringify({
       approval_id:      approvalId,
       decision,

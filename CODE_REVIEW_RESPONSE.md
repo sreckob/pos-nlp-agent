@@ -140,22 +140,22 @@ Removed the `"postgresql://postgres:password@localhost:5432/pos_db"` default fro
 
 ---
 
-## Items pending (Tier 2 — to be done next)
+## Items addressed (Tier 2 — completed May 11, 2026)
 
 ### 🔴 Critical — Database Connection Exhaustion (no pooling)
-**Status: Pending.**
+**Status: ✓ Fixed.**
 
-`executor.py`, `write_ops.py`, and `pending_store.py` open a new `psycopg2.connect()` for every query. Fix: `psycopg2.pool.SimpleConnectionPool` initialised at FastAPI startup, pool managed via a `get_conn()` context manager in a new `db.py`. Estimated ~2-3 hours.
+New `db.py` module introduces `SimpleConnectionPool` (1–10 connections) initialised at FastAPI startup via `@app.on_event("startup")` and released on shutdown. All three files that previously opened a raw `psycopg2.connect()` per query — `executor.py`, `write_ops.py`, `pending_store.py` — now use a shared `get_conn()` context manager that fetches and returns connections atomically.
 
 ### 🔴 Critical — SQL Injection via f-strings
-**Status: Pending.**
+**Status: ✓ Fixed.**
 
-`main.py _tx_exists()` and several functions in `approval_agent.py` build queries with f-strings. Fix: add `params=None` to `execute_query()` and pass values via `cur.execute(sql, params)` — psycopg2 handles escaping. Affects ~5 call sites. Estimated ~1-2 hours.
+`execute_query()` in `executor.py` now accepts an optional `params: tuple = None` argument, passed directly to `cur.execute(sql, params)` — psycopg2 handles escaping. All Python-constructed queries migrated: `_tx_exists()` in `main.py` and `_fetch_tx()`, `_fetch_uncredited()`, `_fetch_loyalty_account()` in `approval_agent.py`. LLM-generated SQL from the agent still passes through the `is_safe_sql()` read-only guard as before.
 
 ### 🔒 Security — No Authentication on `/ops/` Endpoints
-**Status: Pending.**
+**Status: ✓ Fixed.**
 
-`/ops/queue`, `/ops/pending/{id}`, `/ops/decide` are publicly accessible. Fix: FastAPI dependency with a hardcoded `OPS_API_KEY` env var check via `X-Ops-Key` header. ~30 min.
+FastAPI `Depends(require_ops_key)` dependency added to all three ops routes. The dependency checks the `X-Ops-Key` request header against `OPS_API_KEY` env var. Frontend `api.js` sends the key (read from `REACT_APP_OPS_KEY` env var) on every ops fetch. Key generated with `openssl rand -hex 20` and stored in Railway, Vercel, and local `.env` files.
 
 ### 🟡 Architecture — In-Memory `WS_CONNECTIONS` Dict
 **Status: Acknowledged, no action for MVP.**
@@ -168,9 +168,9 @@ Acceptable for a single Railway dyno. Multi-worker scaling would require Redis P
 Refactor into `nodes/` directory. Pure code organisation, no behaviour change. Post-demo.
 
 ### 🟢 Frontend — Silent Error Handling in `OpsQueue.jsx`
-**Status: Pending.**
+**Status: ✓ Fixed.**
 
-Empty catch block shows blank UI when polling fails. Fix: add an `error` state and display a "Server connection lost" banner. ~15 min.
+Added `error` state to the polling `useEffect`. On fetch failure, a red banner "⚠ Server connection lost — retrying…" displays above the queue. The poll continues every 4s so the banner clears automatically when the backend recovers.
 
 ### 🟢 Frontend — Inline Styles
 **Status: Deferred.**
@@ -183,14 +183,14 @@ Acceptable for MVP. CSS Modules or Tailwind post-demo.
 
 | Item | Status |
 |---|---|
-| Race condition in loyalty credit | ✓ Fixed |
-| `env(2)` credentials leaked in git | ✓ Fixed (rotated + purged) |
-| `Math.random()` session IDs | ✓ Fixed |
-| Hardcoded DB password default | ✓ Fixed |
-| DB connection pooling | ⏳ Tier 2 |
-| SQL injection via f-strings | ⏳ Tier 2 |
-| `/ops/` endpoint auth | ⏳ Tier 2 |
+| Race condition in loyalty credit | ✓ Fixed (Tier 1) |
+| `env(2)` credentials leaked in git | ✓ Fixed (Tier 1 — rotated + purged) |
+| `Math.random()` session IDs | ✓ Fixed (Tier 1) |
+| Hardcoded DB password default | ✓ Fixed (Tier 1) |
+| DB connection pooling | ✓ Fixed (Tier 2) |
+| SQL injection via f-strings | ✓ Fixed (Tier 2) |
+| `/ops/` endpoint auth | ✓ Fixed (Tier 2) |
+| `OpsQueue` silent error | ✓ Fixed (Tier 2) |
 | In-memory WS dict | Acknowledged / MVP acceptable |
 | `agent.py` file size | Deferred post-demo |
-| `OpsQueue` silent error | ⏳ Tier 2 |
 | Inline styles | Deferred post-demo |
