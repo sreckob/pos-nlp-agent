@@ -40,7 +40,7 @@ export async function getNewSessionId() {
     const data = await res.json();
     return data.session_id;
   } catch {
-    return "session-" + Math.random().toString(36).slice(2, 10);
+    return "session-" + crypto.randomUUID().slice(0, 8);
   }
 }
 

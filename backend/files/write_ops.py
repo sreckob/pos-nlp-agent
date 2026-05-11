@@ -209,12 +209,12 @@ def credit_loyalty_points(pan_masked: str, points_to_add: int) -> Dict[str, Any]
         cur.execute(
             """
             UPDATE loyalty_accounts
-            SET points       = %s,
+            SET points       = points + %s,
                 tier         = %s,
                 last_updated = %s
             WHERE pan_masked = %s
         """,
-            (new_balance, new_tier, now, pan_masked),
+            (points_to_add, new_tier, now, pan_masked),
         )
 
         # Mark uncredited transactions as credited
