@@ -13,11 +13,11 @@ import re
 import time
 from typing import Any, Dict, List, Optional, TypedDict
 
-import anthropic
 from langgraph.graph import StateGraph, END
 
 from config import settings
 from executor import execute_query, is_safe_sql, export_to_excel
+from llm_client import complete, complete_vision
 from prompts import (
     ROUTER_PROMPT,
     CARDHOLDER_PROMPT,
@@ -28,7 +28,6 @@ from prompts import (
 from logger import log_query
 
 logger = logging.getLogger(__name__)
-client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 # ── Switch / menu keywords ────────────────────────────────────
 CONFIRM_SWITCH_WORDS = {
@@ -116,15 +115,9 @@ class AgentState(TypedDict):
 
 # ── Helpers ───────────────────────────────────────────────────
 def call_claude(system: str, messages: List[Dict], max_tokens: int = 1024, node: str = "router") -> str:
+    """Wrapper kept for backward compat — delegates to llm_client.complete()."""
     temperature = settings.TEMPERATURES.get(node, 0.0)
-    response = client.messages.create(
-        model=settings.CLAUDE_MODEL,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system,
-        messages=messages,
-    )
-    return response.content[0].text.strip()
+    return complete(system, messages, max_tokens, temperature)
 
 
 def parse_json_response(raw: str) -> Dict:
@@ -404,7 +397,13 @@ def dispute_node(state: AgentState) -> AgentState:
             # Replace last message with vision content
             vision_messages = list(state["history"])
             vision_messages.append({"role": "user", "content": vision_content})
-            raw = call_claude(system=DISPUTE_PROMPT, messages=vision_messages, node="dispute")
+            # Vision path always uses complete_vision() → VISION_MODEL (Claude by default)
+            temperature = settings.TEMPERATURES.get("dispute", 0.0)
+            raw = complete_vision(
+                system      = DISPUTE_PROMPT,
+                messages    = vision_messages,
+                temperature = temperature,
+            )
         else:
             raw = call_claude(system=DISPUTE_PROMPT, messages=messages, node="dispute")
 

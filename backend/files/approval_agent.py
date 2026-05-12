@@ -24,14 +24,12 @@ import logging
 import re
 from typing import Any, Dict, List
 
-import anthropic
-
 from config import settings
 from executor import execute_query
+from llm_client import complete
 from prompts import DISPUTE_APPROVAL_PROMPT, LOYALTY_APPROVAL_PROMPT
 
 logger = logging.getLogger(__name__)
-client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
 def _parse_json(raw: str) -> Dict:
@@ -42,16 +40,11 @@ def _parse_json(raw: str) -> Dict:
 
 
 def _call_claude(system: str, payload: str) -> Dict:
-    raw = (
-        client.messages.create(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=400,
-            temperature=settings.TEMPERATURES.get("approver", 0.0),
-            system=system,
-            messages=[{"role": "user", "content": payload}],
-        )
-        .content[0]
-        .text
+    raw = complete(
+        system      = system,
+        messages    = [{"role": "user", "content": payload}],
+        max_tokens  = 400,
+        temperature = settings.TEMPERATURES.get("approver", 0.0),
     )
     return _parse_json(raw)
 

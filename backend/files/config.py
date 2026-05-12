@@ -14,6 +14,21 @@ class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+
+    # ── Multi-LLM config ─────────────────────────────────────
+    # LLM_MODEL: any litellm model string.
+    #   Anthropic: "claude-sonnet-4-6"
+    #   Gemini:    "gemini/gemini-1.5-flash"
+    #   Mistral:   "mistral/mistral-small-latest"
+    # Defaults to CLAUDE_MODEL so existing setups need no change.
+    LLM_MODEL: str  = os.getenv("LLM_MODEL",    os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6"))
+    # VISION_MODEL: used for receipt OCR in the dispute path.
+    # Kept on Claude by default — most reliable for document understanding.
+    VISION_MODEL: str = os.getenv("VISION_MODEL", os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6"))
+
+    # Provider API keys (only set the ones you use)
+    GOOGLE_API_KEY:  str = os.getenv("GOOGLE_API_KEY",  "")
+    MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "")
     MAX_ROWS_RETURNED: int = int(os.getenv("MAX_ROWS_RETURNED", "100"))
     LOG_FILE: str = os.getenv("LOG_FILE", "agent_logs.jsonl")
     OPS_API_KEY: str = os.getenv("OPS_API_KEY", "")
