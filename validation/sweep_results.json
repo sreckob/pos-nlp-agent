@@ -1,0 +1,54 @@
+[
+  {
+    "label": "baseline",
+    "specialist_temp": 0.0,
+    "accuracies": [
+      33.9,
+      41.1,
+      42.9
+    ],
+    "mean_accuracy_pct": 39.3,
+    "min_accuracy_pct": 33.9,
+    "max_accuracy_pct": 42.9,
+    "consistency_pct": 64.3
+  },
+  {
+    "label": "low",
+    "specialist_temp": 0.1,
+    "accuracies": [
+      44.6,
+      41.1,
+      41.1
+    ],
+    "mean_accuracy_pct": 42.3,
+    "min_accuracy_pct": 41.1,
+    "max_accuracy_pct": 44.6,
+    "consistency_pct": 67.9
+  },
+  {
+    "label": "medium",
+    "specialist_temp": 0.3,
+    "accuracies": [
+      42.9,
+      44.6,
+      46.4
+    ],
+    "mean_accuracy_pct": 44.6,
+    "min_accuracy_pct": 42.9,
+    "max_accuracy_pct": 46.4,
+    "consistency_pct": 75.0
+  },
+  {
+    "label": "high",
+    "specialist_temp": 0.5,
+    "accuracies": [
+      39.3,
+      32.1,
+      5.4
+    ],
+    "mean_accuracy_pct": 25.6,
+    "min_accuracy_pct": 5.4,
+    "max_accuracy_pct": 39.3,
+    "consistency_pct": 57.1
+  }
+]
