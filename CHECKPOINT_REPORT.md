@@ -2,7 +2,7 @@
 ## Project 28: NLP Prompting for Payment Transaction Systems
 
 **Course:** Introduction to AI Agents
-**Team:** Srećko Batalov & Milan Bradonjić, mentor: Pavel Katurov
+**Team:** data_surfers, mentor: Pavel Katurov
 **Repository:** github.com/sreckob/pos-nlp-agent
 **Live deploy:** https://pos-nlp-agent.vercel.app
 
