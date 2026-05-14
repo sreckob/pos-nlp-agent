@@ -338,10 +338,13 @@ Additional validated behaviours:
 
 **No current blockers** — all four conversation paths are deployed, tested, and working end-to-end.
 
-**Planned before demo (May 23):**
-1. RAG implementation — pgvector retrieval of chargeback regulation clauses (Visa, Mastercard, PSD2) injected into approver agent audit prompt
+**Planned before code submission and presentation day (May 23):**
+1. RAG implementation — approver agent retrieves similar past cases
 2. Final demo rehearsal with all 4 scenarios
 3. Demo seed verification the day before (topup.py + demo_seed.py)
+4. New evaluation tests
+5. More polishing and enforcing the code for fluent and confident behaviour
+6. Adding more guidence and explanation on UI
 
 ---
 
