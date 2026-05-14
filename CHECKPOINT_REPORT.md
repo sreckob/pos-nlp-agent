@@ -146,7 +146,7 @@ FastAPI backend (Railway)
           credit_loyalty_points()   — updates loyalty_accounts atomically
     → WebSocket push → customer chat notified of ops decision
 PostgreSQL on Supabase
-    → transactions (100,025 rows)
+    → transactions (105,525 rows)
     → loyalty_accounts (4 demo members)
     → pending_approvals (ops approval queue)
 ```
@@ -329,7 +329,7 @@ Additional validated behaviours:
 
 | # | Question / risk | Mitigation / plan |
 |---|---|---|
-| 1 | **RAG for approver agent** not yet implemented. Designed as metadata-filtered retrieval of similar past dispute/loyalty cases to improve audit quality. | Implement Option A1 (SQL-based similarity, no new dependencies) before demo May 23. |
+| 1 | **RAG for approver agent** not yet implemented. Planned as pgvector retrieval of relevant chargeback regulation clauses (Visa Dispute Resolution, Mastercard rules, PSD2 directives) — embedded into a `dispute_policies` vector table on Supabase (pgvector already enabled). At approval time: embed the dispute scenario, retrieve top-3 matching clauses, inject into `DISPUTE_APPROVAL_PROMPT` so audit summaries cite specific regulatory rules rather than pattern-matched heuristics. | Implement before demo May 23. New infra: one pgvector table + ingest script for regulation PDFs. Files: `approval_agent.py`, `prompts.py`, `db.py`, new `ingest_policies.py`. |
 | 2 | **Gemini comparison** blocked by free-tier quota exhaustion during initial sweep (672 API calls). | Wait for daily reset; run a quick single-test first; or enable billing for a proper comparison sweep. |
 | 3 | **First-shot vs conversational accuracy gap.** 44.6% first-shot significantly underestimates real-world task completion because correct clarification requests count as failures. | Log actual conversation completion rates during demo rehearsal as a complementary metric. |
 | 4 | **Dispute/loyalty test sensitivity** — 4 tests require exact seeded duplicate pairs from `demo_seed.py`; results depend on DB state. | Always run `python demo_seed.py` before test runs; document this in test runner. |
