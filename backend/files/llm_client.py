@@ -45,6 +45,35 @@ if settings.MISTRAL_API_KEY:
 
 # ── Text completion (all non-vision nodes) ────────────────────
 
+# Anthropic prompt caching: cache system prompts >= 1024 tokens.
+# Cache TTL is 5 minutes — hits cost 10% of normal input token price.
+# Only applied to Claude models; LiteLLM handles Gemini/Mistral as before.
+_CACHE_TOKEN_MIN = 1024
+
+
+def _estimate_tokens(text: str) -> int:
+    return len(text) // 4
+
+
+def _complete_anthropic_cached(
+    system:      str,
+    messages:    List[Dict],
+    max_tokens:  int,
+    temperature: float,
+    model:       str,
+) -> str:
+    """Anthropic SDK call with cache_control on the system prompt."""
+    response = _anthropic_client.messages.create(
+        model       = model,
+        max_tokens  = max_tokens,
+        temperature = temperature,
+        system      = [{"type": "text", "text": system,
+                        "cache_control": {"type": "ephemeral"}}],
+        messages    = messages,
+    )
+    return response.content[0].text.strip()
+
+
 def complete(
     system:      str,
     messages:    List[Dict],
@@ -58,11 +87,20 @@ def complete(
     system   — system prompt (LiteLLM converts to the right format per provider)
     messages — list of {role, content} dicts (user / assistant alternating)
     model    — override; defaults to settings.LLM_MODEL
+
+    For Claude models with system prompts >= 1024 tokens, uses the Anthropic SDK
+    directly with prompt caching (cache_control: ephemeral). All other models
+    go through LiteLLM as before.
     """
     target_model = model or settings.LLM_MODEL
-    full_messages = [{"role": "system", "content": system}] + messages
+    is_claude = target_model.startswith("claude")
+    use_cache = is_claude and _estimate_tokens(system) >= _CACHE_TOKEN_MIN
 
     try:
+        if use_cache:
+            return _complete_anthropic_cached(system, messages, max_tokens, temperature, target_model)
+
+        full_messages = [{"role": "system", "content": system}] + messages
         response = litellm.completion(
             model       = target_model,
             messages    = full_messages,
