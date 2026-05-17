@@ -163,6 +163,19 @@ def is_switch_confirmation(msg: str) -> bool:
     return msg.strip().lower() in CONFIRM_SWITCH_WORDS
 
 
+def _is_short_reply(msg: str) -> bool:
+    """Return True if the message looks like a reply to a previous question
+    rather than a new intent — digits only, very short, or a simple yes/no."""
+    stripped = msg.strip()
+    if len(stripped) <= 10 and stripped.replace(" ", "").isdigit():
+        return True
+    if len(stripped) <= 20 and re.match(r"^[\d\s\.\,\*]+$", stripped):
+        return True
+    if stripped.lower() in {"da", "ne", "yes", "no", "ok", "ок"}:
+        return True
+    return False
+
+
 def is_menu_request(msg: str) -> bool:
     return msg.strip().lower() in MENU_WORDS
 
@@ -209,12 +222,41 @@ def router_node(state: AgentState) -> AgentState:
             "force_reset": False,
             "answer": answer,
             "error": "no_sql",
+            "history": [],  # clear context on channel switch — prevents cross-channel pollution
         }
+
+    # Fix 2 — short-message bypass: digit-only or very short replies are answers
+    # to the previous prompt, not new intents. Skip LLM and stay in current channel.
+    if current_role and _is_short_reply(user_message):
+        logger.info(
+            f"[{state['session_id']}] Short-reply bypass: staying in {current_role}"
+        )
+        return {
+            **state,
+            "role": current_role,
+            "language": language,
+            "mismatch_count": 0,
+            "pending_role": None,
+            "suggest_switch": False,
+            "switch_message": None,
+            "force_reset": False,
+            "error": None,
+        }
+
+    # Fix 3 — pass last assistant message so router knows what the agent just asked
+    last_assistant = ""
+    if state.get("history"):
+        for msg in reversed(state["history"]):
+            if msg.get("role") == "assistant":
+                last_assistant = msg["content"][:300]
+                break
 
     # Call router LLM
     try:
         router_input = (
-            f"current_channel: {current_role or 'none'}\n" f"message: {user_message}"
+            f"current_channel: {current_role or 'none'}\n"
+            f"last_assistant_message: {last_assistant or 'none'}\n"
+            f"message: {user_message}"
         )
         raw = call_claude(
             system=ROUTER_PROMPT,

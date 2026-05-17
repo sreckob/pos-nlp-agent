@@ -95,6 +95,17 @@ switch_message examples (match user language):
 IMPORTANT: Be conservative with switch suggestions.
 Only suggest when you are very confident (>=0.85) the user is clearly in the wrong channel.
 Ambiguous messages should stay on current channel.
+
+CRITICAL — short replies and digit-only messages:
+If the message is a short reply (a number, card digits like "4242", "yes", "no", "da", "ne",
+an amount, or any other brief answer), it is almost certainly a response to the previous
+assistant question — NOT a new intent. In this case:
+  - Keep detected_role = current_channel
+  - Set suggest_switch = false
+  - Do NOT reclassify based on the short message alone
+
+You will also receive last_assistant_message showing what the agent just said.
+Use this to judge whether the user is answering a question rather than starting a new query.
 """.strip()
 
 # ── Path 1: Cardholder system prompt ─────────────────────────
