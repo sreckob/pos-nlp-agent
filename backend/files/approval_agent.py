@@ -28,6 +28,7 @@ from config import settings
 from executor import execute_query
 from llm_client import complete
 from prompts import DISPUTE_APPROVAL_PROMPT, LOYALTY_APPROVAL_PROMPT
+from rag_store import retrieve_clauses
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +92,24 @@ def review_dispute(original_tx_id: str, duplicate_tx_id: str) -> Dict[str, Any]:
     if original.get("status") == "REVERSED" or duplicate.get("status") == "REVERSED":
         return _reject("transaction already reversed")
 
+    scenario = (
+        f"Duplicate charge dispute: {original.get('merchant_name')} "
+        f"{original.get('amount')} {original.get('currency')} "
+        f"card {original.get('pan_masked')} {original.get('card_brand', '')}"
+    )
+    reg_context = ""
+    if settings.RAG_ENABLED:
+        clauses = retrieve_clauses(scenario, top_k=3)
+        if clauses:
+            lines = [f"- [{c['clause_id']}] {c['source']}: {c['content']}" for c in clauses]
+            reg_context = "\n\nApplicable regulations:\n" + "\n".join(lines)
+
     payload = (
         f"Action: DISPUTE_REVERSAL\n\n"
         f"Original transaction:\n{json.dumps(original, indent=2)}\n\n"
         f"Alleged duplicate:\n{json.dumps(duplicate, indent=2)}\n\n"
         f"Verify all duplicate criteria and decide."
+        f"{reg_context}"
     )
     try:
         decision = _call_claude(DISPUTE_APPROVAL_PROMPT, payload)

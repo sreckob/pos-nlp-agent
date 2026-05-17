@@ -33,6 +33,9 @@ class Settings:
     LOG_FILE: str = os.getenv("LOG_FILE", "agent_logs.jsonl")
     OPS_API_KEY: str = os.getenv("OPS_API_KEY", "")
 
+    # RAG: set to "false" to disable regulation clause retrieval in the approver agent
+    RAG_ENABLED: bool = os.getenv("RAG_ENABLED", "true").lower() not in ("false", "0", "no")
+
     # Temperature per node — override via env vars or tune_temperature.py sweep
     TEMPERATURES: dict = {
         "router":     float(os.getenv("TEMP_ROUTER",     "0.0")),

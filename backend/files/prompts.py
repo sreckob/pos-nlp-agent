@@ -341,6 +341,10 @@ Verify ALL of these duplicate criteria. If ANY fails → REJECT.
 
 Be strict. Reject anything ambiguous.
 
+If "Applicable regulations" are provided below the transaction data, cite the most
+relevant clause in your audit_summary (e.g. "per Visa VDR-11.1.3").
+If no regulation context is provided, apply the criteria above without citation.
+
 Return JSON only — no markdown, no prose outside the JSON:
 
 {
