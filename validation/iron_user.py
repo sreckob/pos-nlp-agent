@@ -134,7 +134,7 @@ SCENARIOS = [
                 "note": "Agent retains DECLINED filter and adds VISA filter",
             },
             {
-                "message": "Export all declined transactions to Excel",
+                "message": "Export all declined transactions from terminal T00101 last week to Excel",
                 "assert_contains": [],
                 "assert_flags": {"has_export": True},
                 "note": "Agent should trigger Excel export",

@@ -163,11 +163,11 @@ def run_dispute_reversal_test(base_url: str) -> dict:
     # Submit dispute
     session_id = f"state-val-{uuid.uuid4().hex[:8]}"
     sub = submit_dispute(base_url, session_id, original_id, duplicate_id)
-    approval_id = sub.get("approval_id")
+    approval_id = sub.get("submission_id")
     if not approval_id:
-        result["details"].append(f"FAIL: submit returned no approval_id: {sub}")
+        result["details"].append(f"FAIL: submit returned no submission_id: {sub}")
         return result
-    result["details"].append(f"Submitted: approval_id={approval_id}")
+    result["details"].append(f"Submitted: submission_id={approval_id}")
 
     # Ops approve
     time.sleep(1)
@@ -211,11 +211,11 @@ def run_loyalty_credit_test(base_url: str) -> dict:
 
     session_id = f"state-val-{uuid.uuid4().hex[:8]}"
     sub = submit_loyalty(base_url, session_id, pan, uncredited)
-    approval_id = sub.get("approval_id")
+    approval_id = sub.get("submission_id")
     if not approval_id:
-        result["details"].append(f"FAIL: submit returned no approval_id: {sub}")
+        result["details"].append(f"FAIL: submit returned no submission_id: {sub}")
         return result
-    result["details"].append(f"Submitted: approval_id={approval_id}, points_to_add={uncredited}")
+    result["details"].append(f"Submitted: submission_id={approval_id}, points_to_add={uncredited}")
 
     time.sleep(1)
     decision = ops_decide(base_url, approval_id, "approve")

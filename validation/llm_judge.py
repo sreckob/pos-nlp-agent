@@ -160,7 +160,7 @@ def submit_dispute(base_url: str, original_id: str, duplicate_id: str, pan: str)
         "pan_masked": pan,
     }, timeout=15)
     r.raise_for_status()
-    return r.json().get("approval_id")
+    return r.json().get("submission_id")
 
 
 # ── Scenario runner ───────────────────────────────────────────
