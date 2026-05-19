@@ -154,7 +154,7 @@ def get_pending_item(base_url: str, approval_id: str) -> dict:
 def submit_dispute(base_url: str, original_id: str, duplicate_id: str, pan: str) -> str:
     session_id = f"judge-{uuid.uuid4().hex[:8]}"
     r = requests.post(f"{base_url}/dispute/submit", json={
-        "session_id": session_id,
+        "customer_session_id": session_id,
         "original_tx_id": original_id,
         "duplicate_tx_id": duplicate_id,
         "pan_masked": pan,

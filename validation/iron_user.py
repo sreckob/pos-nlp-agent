@@ -122,7 +122,7 @@ SCENARIOS = [
         "channel": "MERCHANT",
         "turns": [
             {
-                "message": "Show me all declined transactions from last week",
+                "message": "I am merchant T00101. Show me all declined transactions from last week",
                 "assert_sql_contains": ["DECLINED"],
                 "assert_flags": {},
                 "note": "Agent should generate SQL with DECLINED filter and date range",

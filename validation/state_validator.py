@@ -115,10 +115,10 @@ def get_uncredited_points(pan: str) -> int:
 
 def submit_dispute(base_url: str, session_id: str, original_id: str, duplicate_id: str) -> dict:
     r = requests.post(f"{base_url}/dispute/submit", json={
-        "session_id":       session_id,
-        "original_tx_id":   original_id,
-        "duplicate_tx_id":  duplicate_id,
-        "pan_masked":       DEMO_PAN_VISA,
+        "customer_session_id": session_id,
+        "original_tx_id":      original_id,
+        "duplicate_tx_id":     duplicate_id,
+        "pan_masked":          DEMO_PAN_VISA,
     }, timeout=15)
     r.raise_for_status()
     return r.json()
@@ -126,9 +126,9 @@ def submit_dispute(base_url: str, session_id: str, original_id: str, duplicate_i
 
 def submit_loyalty(base_url: str, session_id: str, pan: str, points: int) -> dict:
     r = requests.post(f"{base_url}/loyalty/submit", json={
-        "session_id":  session_id,
-        "pan_masked":  pan,
-        "points":      points,
+        "customer_session_id": session_id,
+        "pan_masked":          pan,
+        "points_to_add":       points,
     }, timeout=15)
     r.raise_for_status()
     return r.json()
@@ -137,7 +137,7 @@ def submit_loyalty(base_url: str, session_id: str, pan: str, points: int) -> dic
 def ops_decide(base_url: str, approval_id: str, action: str) -> dict:
     r = requests.post(
         f"{base_url}/ops/decide",
-        json={"approval_id": approval_id, "action": action},
+        json={"approval_id": approval_id, "decision": action.upper()},
         headers={"X-Ops-Key": OPS_API_KEY},
         timeout=30,
     )
