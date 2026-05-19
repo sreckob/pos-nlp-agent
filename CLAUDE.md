@@ -28,10 +28,15 @@ FastAPI backend (Railway)
         → SQL validator (read-only guard)
         → SQL executor (psycopg2)
         → Response formatter
-    → Write operations (dispute reversal, loyalty credit)
+    → Pending approvals queue  ← customer Submit enqueues here
+    → Approver agent (approval_agent.py)
+        → RAG store (rag_store.py) — retrieves relevant regulation clauses
+        → LLM audit decision (APPROVE | REJECT + audit_summary)
+    → write_ops.py — called only after ops APPROVE
 PostgreSQL on Supabase
     → transactions table (100,025 rows)
     → loyalty_accounts table (4 demo members)
+    → dispute_policies table (pgvector embeddings of chargeback regulations)
 ```
 
 ---
@@ -43,10 +48,11 @@ PostgreSQL on Supabase
 | Frontend | React 18, WebSocket client |
 | Backend | FastAPI, uvicorn |
 | AI agent | LangGraph 0.2, Anthropic SDK |
-| LLM | Claude Sonnet (claude-sonnet-4-5) |
+| LLM | Claude Sonnet (claude-sonnet-4-6) |
+| RAG / embeddings | sentence-transformers + pgvector (Supabase) |
 | Database | PostgreSQL on Supabase |
 | Excel export | openpyxl |
-| Receipt images | Pillow |
+| Receipt OCR | Claude Vision (Pillow for image handling) |
 | Deployment | Railway (backend), Vercel (frontend) |
 | CI/CD | Auto-deploy on git push to main |
 
@@ -62,6 +68,12 @@ code/
 │       ├── main.py              ← FastAPI app, WebSocket, REST endpoints
 │       ├── agent.py             ← LangGraph graph, all nodes, hybrid router
 │       ├── prompts.py           ← System prompts for all four paths + router
+│       ├── approval_agent.py    ← LLM approver agent (APPROVE/REJECT + audit)
+│       ├── rag_store.py         ← pgvector retrieval for dispute regulation clauses
+│       ├── ingest_policies.py   ← Ingests chargeback regulations into pgvector
+│       ├── pending_store.py     ← In-memory pending approvals queue
+│       ├── llm_client.py        ← Anthropic SDK wrapper with prompt caching
+│       ├── db.py                ← psycopg2 connection pool
 │       ├── session.py           ← In-memory session store with mismatch tracking
 │       ├── executor.py          ← SQL executor, read-only guard, Excel export
 │       ├── write_ops.py         ← Dispute reversal + loyalty credit write ops
@@ -92,8 +104,15 @@ code/
 │       ├── topup.py             ← Adds fresh recent transactions daily
 │       └── generate_receipts.py ← Generates receipt PNG images for demo
 ├── validation/
-│   ├── test_cases.json          ← 37 test cases across 7 categories
-│   ├── run_tests.py             ← Automated test runner with accuracy report
+│   ├── eval_suite.py            ← Master runner: all 6 suites in one command
+│   ├── router_eval.py           ← Router precision/recall/F1 + confusion matrix
+│   ├── state_validator.py       ← DB before/after validation for write ops
+│   ├── policy_checker.py        ← Read-only guard, PAN isolation, ops auth
+│   ├── rag_eval.py              ← RAG Precision@K retrieval quality
+│   ├── llm_judge.py             ← LLM-as-judge for approver audit quality
+│   ├── iron_user.py             ← Multi-turn Iron User conversation scenarios
+│   ├── run_tests.py             ← Legacy test runner (37 cases)
+│   ├── test_cases.json          ← Legacy test cases
 │   └── README.md
 └── receipts/                    ← Generated receipt PNG images for demo
     ├── receipt_dispute_01_maxi.png
@@ -175,8 +194,14 @@ last_rows      # previous result set
 ### Write operations (write_ops.py)
 - `approve_dispute_reversal(original_tx_id, duplicate_tx_id)` — marks duplicate as REVERSED
 - `reject_dispute(duplicate_tx_id)` — marks as REJECTED
-- `credit_loyalty_points(pan_masked, points)` — updates loyalty_accounts + marks transactions
-- Called via REST endpoints: POST /dispute/approve, POST /dispute/reject, POST /loyalty/credit
+- `credit_loyalty_points(pan_masked, points_to_add)` — updates loyalty_accounts + marks transactions
+- Flow: customer clicks Submit → POST /dispute/submit or /loyalty/submit → enqueued → ops reviews via GET /ops/pending/{id} → POST /ops/decide → write_ops called only on APPROVE
+
+### RAG for dispute approvals (rag_store.py)
+- Stores chargeback regulation clauses as pgvector embeddings in Supabase
+- Retrieves top-K relevant clauses for each dispute scenario (sentence-transformers)
+- Used by approval_agent.py to cite regulations in audit summaries (e.g. "per Visa VDR-11.1.3")
+- Run `ingest_policies.py` once to populate the dispute_policies table
 
 ---
 
@@ -210,58 +235,67 @@ npm start
 cd db/supabase
 python topup.py
 
-# Validation tests
+# Full evaluation suite (6 suites)
 cd validation
 pip install websockets
-python run_tests.py
-# or against deployed: python run_tests.py --url wss://pos-nlp-agent-production.up.railway.app
+python eval_suite.py                        # all suites, local backend
+python eval_suite.py --output results.json  # save full report
+python eval_suite.py --only router,policy   # specific suites
+# or against deployed:
+python eval_suite.py --url wss://pos-nlp-agent-production.up.railway.app
 ```
 
 ---
 
 ## Demo scenarios for presentation (May 23)
 
-### Scenario 1 — Merchant (2 min)
-- Select Merchant → type: "Show all declined transactions on my terminals last week"
-- Follow up: "Sortiraj po iznosu" (sort by amount)
-- Follow up: "Export to Excel"
+### Scenario 1 — Cardholder (1.5 min)
+- Select Cardholder → type: "Why was my card ending in 4242 declined yesterday?"
+- Follow up: "Show me all my transactions from last month"
+- Follow up: "Prikaži samo odbijene" (switch to Serbian — shows bilingual capability)
 
-### Scenario 2 — Dispute (3 min)
+### Scenario 2 — Router in action (1 min)
+- Select Cardholder → type: "I was charged twice at Maxi yesterday"
+- Router detects DISPUTE intent → suggests switch
+- Reply "yes" → switches to Dispute path automatically
+
+### Scenario 3 — Dispute (3 min)
 - Select Dispute → type: "I was charged twice at Maxi for my Visa card ending in 4242, amount 3240.50 RSD"
 - Attach: receipts/receipt_dispute_01_maxi.png
 - Agent finds duplicate → click Approve reversal
 - Database updated: duplicate marked REVERSED
 
-### Scenario 3 — Loyalty (2 min)
+### Scenario 4 — Loyalty (2 min)
 - Select Loyalty → type: "My points were not added for card ending in 4242"
 - Agent finds uncredited transactions → click Credit points
 - Database updated: loyalty_accounts.points increased
 
-### Scenario 4 — Router in action (1 min)
-- Select Cardholder → type: "I was charged twice at Maxi yesterday"
-- Router detects DISPUTE intent → suggests switch
-- Reply "yes" → switches to Dispute path automatically
+### Scenario 5 — Merchant (2 min)
+- Select Merchant → type: "Show all declined transactions on my terminals last week"
+- Follow up: "Sortiraj po iznosu" (sort by amount)
+- Follow up: "Export to Excel"
 
 ---
 
-## Current status (as of May 3 2026)
+## Current status (as of May 19 2026)
 
 ### Done ✓
 - Database with all columns (dispute + loyalty)
 - Four-path LangGraph agent
 - Hybrid router with three-strike enforcement
 - Frontend with role selector, chat, all path-specific UI
-- Write operations (dispute reversal, loyalty credit)
+- Write operations (dispute reversal, loyalty credit) via ops approval flow
+- Separation of duties: investigator agents read-only, approver agent + ops human approve writes
+- RAG for dispute approvals (pgvector + sentence-transformers, regulation citations)
+- Prompt caching for DB schema (llm_client.py)
+- Full evaluation suite: router (100% F1), policy (15/15), RAG (P@3=0.625), iron user (4/5)
 - Receipt generator and demo images
 - Deployed Railway + Vercel
 - Auto-deploy on git push
 
 ### Remaining
-- Run validation test suite and fix failing tests
-- Update test_cases.json with dispute/loyalty test cases
-- Write checkpoint report (due May 14)
-- Update README.md
-- Final demo rehearsal
+- Fix merchant Excel export in iron user (turn 3)
+- Final demo rehearsal (May 23)
 
 ---
 
@@ -285,8 +319,10 @@ python run_tests.py
 ## Key design decisions (for presentation)
 
 - **LangGraph over plain Python** — state machine handles multi-turn context and conditional routing cleanly
-- **NL2SQL not RAG** — structured data → SQL is more precise than vector search
-- **No vector DB** — schema fits in system prompt (400 tokens), pgvector not needed
+- **NL2SQL for queries, RAG for approvals** — SQL is more precise than vector search for structured transaction data; RAG is used in the approver agent to retrieve relevant chargeback regulation clauses (pgvector + sentence-transformers)
+- **Schema in system prompt** — schema fits in ~400 tokens, cached via prompt caching to reduce latency and cost
 - **Hybrid router** — user selects role (reduces cognitive load) + AI validates each message (catches mistakes)
+- **Separation of duties** — investigator agents only read; a separate approver agent + ops human must approve before any write occurs
+- **Hallucination guard** — format_node overrides Claude's dispute_found/credit_recommended flags based on actual DB row counts
 - **PCI-DSS safe** — only schema goes to Anthropic API, never actual card data
 - **Read-only guard** — SQL validator blocks all destructive statements before execution
