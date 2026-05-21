@@ -17,7 +17,7 @@ This project replaces that with a chat interface: the user describes what they w
 
 ## Demo video
 
-[Watch the demo](https://wetransfer.com/downloads/115770eecce1f76eab58139d732a0cde20260521111015/b298bb36e0a1cb86d2e012afd6ba3ea620260521111055/26f09d) *(temporary link, valid until May 24 2026 — will be replaced with YouTube)*
+[Watch the demo on YouTube](https://youtu.be/GqxZ-XHQN1o)
 
 ---
 
