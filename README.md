@@ -153,6 +153,76 @@ python ingest_policies.py  # populate pgvector RAG store (first time only)
 
 ---
 
+## Running fully locally (no cloud accounts)
+
+If you want to run the full stack on your own machine without Supabase or Railway, use Docker for the database.
+
+**1. Start PostgreSQL with pgvector in Docker:**
+```bash
+docker run -d \
+  --name pos-nlp-db \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=pos_nlp \
+  -p 5432:5432 \
+  pgvector/pgvector:pg16
+```
+
+**2. Apply the schema:**
+```bash
+psql postgresql://postgres:postgres@localhost:5432/pos_nlp \
+  -f db/supabase/schema.sql
+```
+
+If you don't have `psql` installed: `brew install libpq` on Mac, or use any PostgreSQL client.
+
+**3. Set environment variables:**
+
+The project uses two `.env` files — one for the backend, one for the seed scripts:
+
+```bash
+# Backend (API server)
+cp backend/files/.env.example backend/files/.env
+# Edit backend/files/.env and set:
+#   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pos_nlp
+#   ANTHROPIC_API_KEY=sk-ant-your-key-here
+#   OPS_API_KEY=any-local-secret
+
+# Database seed scripts
+cp db/supabase/.env.example db/supabase/.env
+# Edit db/supabase/.env and set:
+#   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pos_nlp
+#   ANTHROPIC_API_KEY=sk-ant-your-key-here  (needed for ingest_policies.py only)
+```
+
+**4. Seed the database (first time only, ~2 min):**
+```bash
+cd db/supabase
+python seed_v2.py          # 100k transactions
+python demo_seed.py        # dispute pairs + loyalty demo data
+cd ../../backend/files
+python ingest_policies.py  # populate pgvector RAG store
+```
+
+**5. Start backend and frontend** — same as the cloud setup above:
+```bash
+# Terminal 1
+cd backend/files && uvicorn main:app --reload --port 8000
+
+# Terminal 2
+cd frontend && npm start
+```
+
+**Run before each test session:**
+```bash
+cd db/supabase
+python topup.py      # adds fresh recent transactions
+python demo_seed.py  # re-seeds dispute pairs (write ops consume them)
+```
+
+> **Note:** The `pgvector/pgvector:pg16` Docker image includes the pgvector extension pre-installed. If you use a plain `postgres` image you will need to install it manually (`CREATE EXTENSION vector;`).
+
+---
+
 ## Evaluation results
 
 Latest run against local backend (May 19, 2026):
